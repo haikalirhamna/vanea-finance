@@ -1,6 +1,6 @@
 # Vanea — Design System & UX Direction
 
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Draft for review
 **Last updated:** 2026-10-09
 
@@ -47,7 +47,11 @@ The dominant number is **Available Spending**, never total wealth. Every seconda
 | Salary, pay yourself | Draw, distribution, payroll |
 | Available Spending | Balance, wallet, budget |
 | Business cost, subscription | Operating expense, OPEX |
-| Salary advance | Self-loan, debt, credit |
+| Salary advance | Self-loan |
+| Debt, credit line, installment loan | Liability, obligation, payable |
+| Bill reserve, "set aside for the bill" | Escrow, accrual |
+| Cost of borrowing | APR (shown only as "about X% a year") |
+| Put in, estimated value, on paper | Cost basis, mark-to-market, unrealized P&L, portfolio worth |
 | Typical income | Baseline, median |
 | Usual swing | Volatility, MAD, standard deviation |
 | Runway, "covers N months" | Burn rate |
@@ -117,6 +121,8 @@ All numbers use Indonesian formatting, because every amount is in rupiah:
 | Salary due | "Payday today · Pay yourself Rp 8.000.000" with an inverted **Pay salary** pill (white fill, deep violet label) inside the hero, above the amount. |
 | Pool too small for full salary | Same as Salary due, plus "Your Pool can pay Rp 3.500.000 of it." |
 | Pace ahead | One line under the daily allowance: "You've used 62% of this period's money; 40% of the period has passed." |
+| Installments due before payday | The daily-allowance line names them: "Rp 141.000 a day until 25 Oct, after Rp 650.000 in installments due before then." |
+| Debt payment ratio above 30% | Not on the dashboard; a calm card in the Debts view (§16.2). |
 | Salary pressure | A single pressure card on the sheet, directly under the duo cards (§6.4). Never more than one at a time. |
 | Raise eligible | A small quiet pill inside the Salary duo card: "Review available". No badge dot, no glow, no notification. |
 
@@ -124,7 +130,7 @@ All numbers use Indonesian formatting, because every amount is in rupiah:
 
 ## 5. Onboarding
 
-Order: Welcome → Payday → Income history → Current money → Subscriptions → Salary recommendation → Privacy & backup → Dashboard.
+Order: Welcome → Payday → Income history → Current money → Subscriptions → Debts → Investments → Salary recommendation → Privacy & backup → Dashboard.
 
 - The Welcome screen uses the hero canvas full-height with the orb motif and one primary pill. Every following step uses the light sheet with a large title.
 - One question per screen. A thin progress line at the top (not steps to "complete" or celebrate).
@@ -473,6 +479,8 @@ Local only. Short, factual, and never urgent in tone.
 | New month | "September is done. Take a minute to reflect and set October's intention." |
 | Salary pressure (`SERIOUS`) | "Your Pool may run out in about 2 months. Open Vanea to review your salary." |
 | Backup | "Your last backup was 34 days ago. Export one to keep your data safe." |
+| Installment due | "Your Kredivo installment of Rp 550.000 is due today." |
+| Credit line bill due | "Your PayLater bill is due today: Rp 1.500.000. Rp 1.200.000 is already set aside." |
 
 There is no notification for raise eligibility.
 
@@ -561,3 +569,77 @@ Avoid:
 - Thumb-reach primary actions; numeric keypad with live thousands separators for amount fields.
 - System back always works, closes bottom sheets first, and never discards a filled form without confirmation.
 - Do not impose arbitrary tap-count rules when a longer flow materially improves comprehension or safety (salary decisions, imports, reversals).
+
+---
+
+## 16. Subscriptions, Debts & Investments Screens
+
+All three live under **More** in the bottom bar and use the same components (§8.7). None of their numbers appear in the dashboard hero.
+
+### 16.1 Subscriptions
+
+```text
+SUBSCRIPTIONS                                   [ + ]
+Monthly commitments  Rp 725.000                       ← overline + amount on the sheet
+
+[▢] Figma            Monthly      Rp 225.000          ← list rows, no boxes
+    Next 15 Nov
+[▢] Adobe CC         Yearly     Rp 2.400.000
+    Rp 200.000 a month · next 3 Mar · +12% since Jan 2026
+```
+
+- **Billing cycle** is a two-option segmented selector (Monthly | Yearly) with **no option preselected**; Save stays disabled until one is chosen.
+- "Did the price change?" is a bottom sheet with two equal-weight secondary pills: **Yes, from now on** · **Only this time**.
+- The price-change impact uses plain text under the field, never a colored banner.
+- Delete is a text button at the bottom of the edit screen; its confirmation is a bottom sheet that states what stays (history, already-paid yearly shares).
+
+### 16.2 Debts
+
+```text
+╭──────────────────────────────────────╮  ← compact hero (deep gradient)
+│ TOTAL OWED                            │
+│ Rp 3.150.000                          │
+│ Due this month Rp 1.500.000 · 19% of salary │
+╰──────────────────────────────────────╯
+  Credit lines
+  [▢] PayLater           Owed Rp 1.500.000
+      Due 25 Oct · Rp 1.200.000 set aside
+  Loans
+  [▢] Kredivo 6×         Owed Rp 1.650.000
+      Next Rp 550.000 on 2 Nov · 3 of 6 left
+  Salary advance
+  [▢] From your Pool     Rp 1.000.000 · 1 period left
+```
+
+- Above 30%, a calm card under the hero: *"Debt payments take 38% of your salary this month."* Caution icon tile, no advice, no ranking.
+- **Loan preview** before saving is a white card (radius 20) with three rows — you receive, you repay, cost of borrowing — and one plain line: *"about 365% a year"*. The cost uses `ink-900`, never red.
+- The OJK line sits under the lender field as caption text with an info icon.
+- **Bill payment preview** shows the split as two rows (from bill reserve · from Available Spending).
+- Debts never use the vivid gradient; the hero is the only deep surface.
+
+### 16.3 Investments
+
+```text
+╭──────────────────────────────────────╮  ← compact hero (deep gradient)
+│ PUT IN                                │
+│ Rp 25.000.000                         │
+│ Estimate Rp 27.400.000 · oldest as of 12 Aug │  ← on-deep-muted, smaller
+╰──────────────────────────────────────╯
+  By asset class                (share of put in)
+  Stocks            44%   ▬▬▬▬▬▬▬▬▬   High
+  Crypto            32%   ▬▬▬▬▬▬     Very high
+  Money market      24%   ▬▬▬▬▬      Low
+  "Risk labels describe each asset class in general, not your holdings."
+
+  [▢] BBCA            Put in Rp 11.000.000
+      Estimate Rp 12.300.000 · as of 1 Oct · on paper +Rp 1.300.000
+```
+
+- **Put in** is always the large number; the estimate is secondary text with its date. Values older than 90 days add *"last updated 3 months ago"* in `ink-600`.
+- **On paper** differences use neutral `ink-600` text with a plus or minus sign: no green, no red, no arrows, no celebration.
+- Risk labels are small neutral tags (`radius-xs`, `line` outline). *Very high* is not colored differently from *Low*; the word carries the meaning.
+- The concentration note is a single line under the allocation, never a card or notification.
+- **Sell** asks "Send the cash to" with two equal-weight pills (Available Spending · Savings) and no preselection.
+- No charts of investment value over time in v1, and no investment numbers on the dashboard, salary screens or notifications.
+- **Net position** (More → Net position) shows three separate sections — Money, Investments (put in, estimate beside it), Debts — with no grand total.
+

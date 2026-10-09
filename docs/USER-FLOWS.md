@@ -1,10 +1,10 @@
 # Vanea — User Flows
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Draft for review
 **Last updated:** 2026-10-09
 
-Each flow lists its steps, outcomes and edge cases. Copy and layout: DESIGN. Rules and formulas: SYSTEM-OVERVIEW.
+Each flow lists its steps, outcomes and edge cases. Copy and layout: DESIGN. Rules and formulas: SYSTEM-OVERVIEW. Flows marked **(M0.1)** cover subscriptions, debts and investments (PRD sections 8.3, 8.12 and 8.13).
 
 **Core UX principle:**
 
@@ -29,7 +29,12 @@ Income history (optional) — "How many past months can you fill in?" (0–12)
  ↓
 Current money — Pool · Available Spending · Savings · Investments
  ↓
-Subscriptions (optional) — name, amount, monthly/yearly, next due date
+Subscriptions (optional) — name, price, monthly or yearly (required, no default), next billing date
+ ↓
+Debts (optional) — credit lines with their current balance; loans and PayLater installments
+   with remaining installments → "Set this balance aside from Available Spending?" (default yes)
+ ↓
+Investments (optional) — holdings: asset class, amount put in, current estimated value if known
  ↓
 Salary recommendation
    ├─ ≥ 3 months of data → recommended amount + "Why this amount"
@@ -44,13 +49,14 @@ Privacy & backup — data is only on this phone; enable app lock
 Dashboard
 ```
 
-**Outcomes:** profile created; historical months stored as evidence (no Pool effect); opening balances recorded; salary setting `initial` created; calibration runs for the first 3 salary periods.
+**Outcomes:** profile created; historical months stored as evidence (no Pool effect); opening balances recorded (including owed amounts, bill reserves and holdings' put in); salary setting `initial` created; calibration runs for the first 3 salary periods.
 
 **Edge cases**
 
 - The user skips history and has no data → no recommendation; calibration lets them adjust as data arrives.
 - Opening Pool is 0 → allowed; the first payday may only allow a partial payment.
 - Onboarding on payday → the first salary period is the current month.
+- Yearly subscriptions already paid before onboarding are inside the historical net income; they are not spread again.
 
 ---
 
@@ -69,9 +75,13 @@ Pool increases · runway updates
 ## 3. Record a Business Cost
 
 ```text
-Pool → + Business cost → amount → category (Subscription / Tools / Tax / Other) → date → Save
+Pool → + Business cost → amount → category (Subscription / Tools / Tax / Other) → date
+ ├─ Subscription → "Billed monthly or yearly?" (required, no default)
+ │                → link to a saved subscription, or save as a new one
+ └─ Tools / Tax / Other → one-off, nothing more to ask
  ↓
-Pool decreases · this month's net income decreases
+Save → Pool decreases by the full amount
+     → net income: full amount this month, or 1/12 per month for 12 months if yearly
 ```
 
 **Edge case:** amount exceeds what the Pool allows → error with the maximum (DESIGN §12). The user can record the income that paid for it first.
@@ -80,36 +90,63 @@ Pool decreases · this month's net income decreases
 
 ## 4. Subscriptions
 
-### 4.1 Add or edit
+### 4.1 Add, edit or delete
 
 ```text
-Pool → Subscriptions → + Add → name → amount → monthly/yearly → next due date → Save
+Pool → Subscriptions → + Add → name → monthly or yearly (required) → price → next billing date → Save
+Subscription → Edit → any field → Save
+Subscription → Delete → confirmation:
+   "Reminders stop and it leaves your monthly commitments.
+    Costs already recorded stay in your history." → Delete
 ```
 
-### 4.2 Due date
+Adding and deleting are always allowed. A yearly charge already paid keeps counting 1/12 per month after deletion.
+
+### 4.2 Billing date
 
 ```text
-Notification on due date: "Figma renews today: Rp 225.000"
+Notification on the billing date: "Figma renews today: Rp 225.000"
  ↓
-Tap → prefilled business cost (amount editable)
- ├─ Record → business cost saved; next due date advances
- ├─ Skip this time → next due date advances; nothing recorded
- └─ Cancel subscription → marked inactive
+Tap → prefilled business cost with the subscription's cycle (amount editable)
+ ├─ Record, amount as expected → saved; next billing date advances one cycle
+ ├─ Record, amount different → "Did the price change?"
+ │     ├─ Yes, from now on → new price effective from this billing date → saved
+ │     └─ Only this time  → saved; the price stays
+ ├─ Skip this time → next billing date advances; nothing recorded
+ └─ Delete subscription → §4.1
 ```
 
 Nothing is recorded without confirmation.
+
+### 4.3 Announced price change
+
+```text
+Subscription → Price → "New price from…" → amount → effective date → Save
+ ↓
+Impact: "Your monthly commitments rise by Rp 25.000, to Rp 8.725.000. Your Pool still covers 2,8 months."
+ ↓
+Until that date reminders show the old price; from that date the new one
+```
+
+Past costs never change. A yearly subscription's new price applies at its next renewal.
 
 ---
 
 ## 5. Record an Expense
 
 ```text
-Dashboard → + Expense → amount → category (Needs / Wants / Growth / Unexpected) → Save
+Dashboard → center action (+) → amount → category (Needs / Wants / Growth / Unexpected) → Save
  ↓
 Available Spending decreases · daily allowance updates
 ```
 
-Date and note are optional fields below the fold (date defaults to today).
+Date, note and **Paid with** are optional fields below the fold (date defaults to today; Paid with defaults to Available Spending).
+
+| Paid with | Result |
+|---|---|
+| Available Spending (cash, debit, e-wallet) | Available Spending decreases |
+| A credit line (card, PayLater) (M0.1) | Available Spending decreases; the amount moves into the line's bill reserve and is owed on the line |
+| Installment purchase (M0.1) | Opens the loan form (§22.2) prefilled with the price; Available Spending drops only as installments are paid; the full price counts in this month's Kakeibo spending |
 
 **Edge cases**
 
@@ -306,24 +343,21 @@ Savings → Withdraw → amount ≤ balance → Save   (Savings → Available Sp
 
 ## 15. Investments
 
-```text
-Investments → Add contribution → amount → asset label → Save   (Available Spending → Investments)
-Investments → Withdraw → amount ≤ balance → asset → Save        (Investments → Available Spending)
-```
-
-No market value tracking in v1.
+Replaced by §23 (M0.1): holdings by asset class, put in, estimated values and sales.
 
 ---
 
 ## 16. Pool Surplus
 
 ```text
-Pool → "Safe surplus: Rp 6.000.000" → Move to Savings / Investments → amount
+Pool → "Safe surplus: Rp 6.000.000" → Move to: Savings / an investment holding / a debt (M0.1) → amount
  ├─ ≤ safe surplus → confirm
  └─ > safe surplus → shows runway after the move → confirm or adjust
  ↓
-Pool decreases · Savings/Investments increase
+Pool decreases · the destination increases (or the debt's owed amount decreases)
 ```
+
+Vanea does not suggest which destination. Paying a credit line from the Pool also returns its bill reserve to Available Spending (SYSTEM-OVERVIEW §6.9).
 
 ---
 
@@ -345,6 +379,8 @@ Optional Wants limit → Save (or Skip)
 New month → "Reflect on September"
  ↓
 Pre-filled: received · intended · spent (by category) · set aside
+ ↓
+Separate lines (M0.1): debt payments · cost of borrowing · investment income · realized gains or losses
  ↓
 Worth noticing (up to 2 highlights, from the 4th observed month)
  ↓
@@ -394,3 +430,157 @@ The lock can be disabled in Settings (requires authentication). The lock gates t
 ```text
 Settings → Payday → new day (1–28) → applies from the first unpaid period → Confirm
 ```
+
+---
+
+## 22. Debts (M0.1)
+
+### 22.1 Credit lines (card, PayLater pay-next-month)
+
+```text
+Debts → + Credit line → name → type (credit card / PayLater) → statement day → due day → limit (optional) → Save
+```
+
+**Pay with the line** — see §5 (Paid with).
+
+**Interest, fees, late fees**
+
+```text
+Credit line → Add cost → type (interest / fee / late fee) → amount → Save
+ ↓
+Available Spending decreases · bill reserve and owed increase · shown later as cost of borrowing
+```
+
+**Pay the bill**
+
+```text
+Due-date notification or Credit line → Pay bill → amount (default: amount due) → from Available Spending or the Pool
+ ↓
+Preview: "Rp 1.200.000 comes from the bill reserve; Rp 300.000 from Available Spending (older balance)."
+ ↓
+Confirm → owed decreases
+```
+
+Paying more than is owed is rejected with the owed amount as the maximum.
+
+**Convert a purchase to installments**
+
+```text
+Credit line → a purchase → Convert to installments → installment amount → number of installments → first due date
+ ↓
+Preview: cost of borrowing and approximate yearly rate (e.g. conversion fee)
+ ↓
+Confirm → the purchase leaves the line and its reserve; the reserved money returns to Available Spending;
+          a new installment loan starts. The expense keeps its full price in its original month.
+```
+
+### 22.2 Installment loans (online loan, bank loan, installment purchase, PayLater installments, personal)
+
+```text
+Debts → + Loan → lender → type → purpose (personal / business) → amount received → installment amount
+      → number of installments → monthly or single payment → first due date
+      → (online loan) "Registered with OJK?" yes / no / not sure — with the line "Check that the lender is registered with OJK."
+ ↓
+Before saving: "You receive Rp 2.000.000 and repay Rp 2.600.000 in 30 days.
+                This loan costs Rp 600.000 — 30% of what you borrow, about 365% a year."
+ ↓
+Save
+ ├─ Personal cash loan → Available Spending increases
+ ├─ Installment purchase → no cash change (the item is an expense, §5)
+ └─ Business loan → Pool increases, marked borrowed (not usable for salary)
+```
+
+The money received is never income. Recording a loan is never blocked.
+
+**Pay an installment**
+
+```text
+Due-date notification or Loan → Pay installment (default: the installment amount)
+ ↓
+Personal loan → from Available Spending · Business loan → from the Pool
+ ↓
+Owed decreases · the interest part is shown as cost of borrowing (or a business cost for business loans)
+```
+
+**Late fee:** Loan → Add late fee → amount → owed increases. Nothing else changes automatically.
+
+**Early payoff:** Loan → Pay off → amount actually paid → preview "Interest saved: Rp X" → confirm → the loan closes.
+
+### 22.3 Debts view and ratio
+
+```text
+Debts → total owed · each debt: owed, next due date and amount, remaining installments, bill reserve (credit lines)
+      → salary advance listed separately
+      → debt payment ratio this month; above 30% a calm card:
+        "Debt payments take 38% of your salary this month."
+```
+
+The daily allowance already sets aside personal installments due before the next payday (§5 dashboard line).
+
+---
+
+## 23. Investments (M0.1)
+
+### 23.1 Holdings
+
+```text
+Investments → + Holding → name → asset class (shows its general risk label) → platform (optional) → Save
+```
+
+Asset classes: time deposit, government bonds, money market fund, fixed income fund, mixed fund, gold, equity fund, stocks, crypto & digital assets, other (user sets the risk label).
+
+### 23.2 Put money in
+
+```text
+Holding → Add contribution → amount (after fees) → from Available Spending (or Pool surplus, §16) → Save
+ ↓
+Put in increases
+```
+
+### 23.3 Update the estimated value
+
+```text
+Holding → Update value → current value → date (default today) → Save
+ ↓
+Shown as "estimate · as of 12 Oct"; after 90 days: "value last updated 3 months ago"
+```
+
+A value update never changes any money total, the Pool, runway or salary.
+
+### 23.4 Sell or withdraw
+
+```text
+Holding → Sell → cash received → sold: all / part (share) → send to: Available Spending or Savings (no default)
+ ↓
+Preview: "Cost of what you sold: Rp 4.000.000 · Realized gain: Rp 600.000"
+ ↓
+Confirm → put in decreases by the cost sold · the chosen account increases
+```
+
+### 23.5 Dividends, coupons, interest
+
+```text
+Holding → Add income → amount → Save → kept with the holding (not Available Spending, not the Pool)
+Holding → Withdraw cash → amount → Available Spending or Savings (no default)
+```
+
+In-kind income (staking rewards, reinvested dividends, bonus units) → §23.3 value update.
+
+### 23.6 Investments view and net position
+
+```text
+Investments → put in (main total) · estimated value and on-paper difference (secondary, neutral)
+            · allocation by asset class with risk labels
+            · concentration note when a high or very-high-risk class is over 50% of put in
+More → Net position → three separate groups: Money · Investments · Debts (never one total)
+```
+
+---
+
+## 24. Subscription Price Check at a Glance (M0.1)
+
+| Moment | What Vanea does |
+|---|---|
+| Billing confirmed with a different amount | Asks "Did the price change?" (§4.2) |
+| Announced change saved | Shows the impact on commitments and runway (§4.3) |
+| Subscription list | Shows a quiet "+12% since Jan 2026" when the price has changed |

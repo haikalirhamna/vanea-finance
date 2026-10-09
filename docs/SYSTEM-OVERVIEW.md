@@ -1,8 +1,10 @@
 # Vanea — System Overview & Domain Specification
 
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Draft for review
 **Last updated:** 2026-10-09
+
+> **Implementation status.** `src/domain` implements the rules of v2.1 (milestone M0). Rules marked **(M0.1)** — subscriptions and cost spreading, credit lines, installment loans, investments by holding, the own Pool and the debt-aware insights — are specified here but not implemented yet (PRD §12).
 
 This document is the single source of truth for Vanea's architecture and for every financial algorithm. The PRD describes *what* the product does and *why*; this document defines *exactly how* the numbers are calculated. When the two disagree, fix the disagreement — do not pick one silently.
 
@@ -36,6 +38,9 @@ Priorities, in order:
 | Local notifications | `expo-notifications` | Local scheduling only; no push server. |
 | Backup | `expo-file-system`, `expo-sharing`, `expo-document-picker` | Export/import of an encrypted backup file. |
 | Randomness | `expo-crypto` | Database key and backup salt/nonce generation. |
+| Gradients | `expo-linear-gradient` | Hero, pills, duo cards (DESIGN §8.3) |
+| Vector graphics | `react-native-svg` | Hero glow, orbs, bottom-bar cradle, charts |
+| Fonts | `expo-font` + `@expo-google-fonts/inter`, `@expo-google-fonts/plus-jakarta-sans` | Bundled at build time; work offline |
 | Backup encryption | `@noble/ciphers` (XChaCha20-Poly1305) + `@noble/hashes` (scrypt) *(candidate)* | Pure JS; validate performance on a mid-range device in M5. |
 | Tests | Jest with `ts-jest` for `src/domain` (plain Node, no Expo needed); `jest-expo` for UI tests from M1. `fast-check` for property tests | |
 | Lint | ESLint (Expo config) + `no-restricted-imports` for `src/domain` | Enforces the domain boundary. |
@@ -74,6 +79,11 @@ src/
     salary-payment.ts         Entitlement, partial payment, top-up (§6.3)
     salary-advance.ts         Advance limits, installments, outstanding, income-reversal remainder (§6.4, §6.5)
     salary-pressure.ts        Pressure levels and safe salary (§5.6)
+    subscriptions.ts          Price history, monthly equivalent, yearly cost spreading (§6.8)        (M0.1)
+    credit-lines.ts           Bill reserve, amount due, conversion to installments (§6.9)           (M0.1)
+    installment-loans.ts      Schedule, cost of borrowing, yearly rate, interest split (§6.10)      (M0.1)
+    debts.ts                  Across all debts: owed totals, due list, payment ratio (§7.4)         (M0.1)
+    investments.ts            Put in, estimated value, realized gain, allocation (§6.11)            (M0.1)
     spending.ts               Available Spending, daily allowance, pace (§7)
     reflection.ts             Highlights, set-aside, intention vs actual (§8)
     __tests__/                One test file per module (e.g. salary-review.test.ts), plus:
@@ -86,13 +96,16 @@ src/
     profile.ts                Profile and settings
     transactions.ts           Transactions and movements (append-only writes)
     salary.ts                 Salary settings, evaluations, advances
-    recurring-costs.ts        Subscriptions
+    subscriptions.ts          Subscriptions and their price history
+    debts.ts                  Credit lines and installment loans
+    investments.ts            Holdings and valuations
     planning.ts               Historical income months, intentions, reflections
     backup.ts                 Export and import
-  features/<feature>/         One folder per feature (dashboard, income, salary, spending, reflection, settings)
+  features/<feature>/         One folder per feature (dashboard, income, salary, spending, subscriptions, debts, investments, reflection, settings)
     <feature>-hooks.ts        All hooks of the feature in one file
     components/               Feature-specific components, grouped by screen section
   components/                 Shared UI components
+    theme.ts                  Design tokens: colors, gradients, radii, spacing, shadows, type (DESIGN §8)
   lib/
     format.ts                 Money, number and date formatting
     notifications.ts          Local notification scheduling
@@ -196,6 +209,10 @@ All thresholds live in `src/domain/config.ts`. Values below are the validated de
 | `HIGHLIGHT_RELATIVE_CHANGE` | 0.20 | Minimum relative change to highlight |
 | `HIGHLIGHT_MIN_AMOUNT` | 200.000 | Minimum absolute change to highlight |
 | `HIGHLIGHT_MAX_ITEMS` | 2 | Highlights shown |
+| `YEARLY_SPREAD_MONTHS` | 12 | Months a yearly subscription charge is spread over (M0.1) |
+| `DEBT_RATIO_THRESHOLD` | 0.30 | Debt payment ratio above which the calm card appears (M0.1) |
+| `INVESTMENT_STALE_DAYS` | 90 | Estimated value considered old (M0.1) |
+| `CONCENTRATION_SHARE` | 0.50 | Asset-class share of put in that triggers the concentration note (M0.1) |
 
 ### 5.2 Monthly Net Income
 
@@ -204,14 +221,16 @@ The engine works on **monthly net income**: what the user's work produced in a m
 ```text
 net(m) = historical(m)
        + Σ income dated in m
-       − Σ business costs dated in m
+       − Σ business cost shares falling in m                  (M0.1: yearly subscriptions spread, §6.8)
+       − Σ interest part of business-loan payments dated in m (M0.1: §6.10)
 ```
 
-- Reversed transactions and their reversals are excluded (they cancel out).
-- `historical(m)` comes from onboarding (SCHEMA §3.2). It exists only for months before onboarding and for the part of the onboarding month before the onboarding date.
+- **Excluded**, always: loan money received (`loan_start`), investment income and sale proceeds, opening balances, and every transfer between the user's own accounts. Borrowed money is never income (PRD principle 12).
+- Business costs count in full in the month paid, except yearly subscription charges, which are spread over 12 months (§6.8).
+- Reversed transactions and their reversals are excluded together, as if they never happened. A correction contributes through its replacement transaction.
+- `historical(m)` comes from onboarding (SCHEMA §3.2). It exists only for months before onboarding and for the part of the onboarding month before the onboarding date. It is already net of costs and is never spread.
 - Only **completed** months are used.
-- A reversed income or business cost is excluded together with its reversal, as if it never happened. A correction contributes through its replacement transaction.
-- Net income can be negative in a month of heavy costs; it is not clamped. (A yearly subscription paid in one month makes that month look weak — see PRD §14.)
+- Net income can be negative in a month of heavy costs; it is not clamped.
 - The engine series runs from the earliest month with data to the last completed month. Months inside that span with no records count as **0**. A month with no income is real information for variable-income users.
 
 ### 5.3 Sustainable Salary & Recommendation ("worst-months test")
@@ -228,7 +247,7 @@ recommended = floor(sustainable / 50.000) × 50.000
 ```
 
 - Requires at least 3 months of data. With fewer, there is no recommendation (§5.5.1).
-- `Pool_now` is the current Pool balance.
+- `Pool_now` is the **own Pool** (M0.1): `max(0, Pool − business-loan principal still owed)` (§6.10). Borrowed money never makes a salary look sustainable. Until M0.1 the code uses the Pool balance, which is identical when there are no business loans.
 - The 5% safety margin keeps the Pool slowly growing. In simulation, a salary equal to 100% of mean income left 5% of stable-income users unable to pay their full salary at least once in two years. With 95% it dropped to 0%.
 
 **Explanation shown to the user** uses the `k` that produced the minimum:
@@ -340,12 +359,15 @@ Requires ≥ 3 completed months. Computed whenever the dashboard loads.
 
 ```text
 typical            = median(net income of last 3 completed months)
-monthly_commitment = salary + Σ active recurring costs per month
-                     (monthly amount, or yearly amount / 12)
-runway_months      = Pool / monthly_commitment
+monthly_commitment = salary
+                   + Σ subscriptions' monthly equivalent at today's price (§6.8)
+                   + Σ business-loan installments due per month (§6.10)
+runway_months      = own_pool / monthly_commitment
 if salary > typical:
-    months_to_empty = Pool / (salary − typical)
+    months_to_empty = own_pool / (salary − typical)
 ```
+
+`own_pool` is defined in §5.3. Personal debt payments are not Pool commitments: they come out of Available Spending (§7.2, §7.4).
 
 | Level | Condition | Shown |
 |---|---|---|
@@ -428,35 +450,51 @@ Re-run the simulation whenever a constant in §5.1 changes, and after three mont
 | `pool` | Income not yet paid as salary or used for business costs | **Never** |
 | `personal` | **Available Spending** — the user's personal money | Yes (shown as overspent) |
 | `savings` | Money set aside | Never |
-| `investment` | Money invested (cost basis; no market value tracking in v1) | Never |
+| `investment:<holding>` | **Put in** of one holding: contributions minus cost of what was sold (M0.1) | Never |
+| `investment_cash:<holding>` | Cash income kept with a holding (dividends, coupons) (M0.1) | Never |
+| `bill_reserve:<line>` | Money already taken out of Available Spending for a credit line's bill (M0.1) | Never |
+| `debt:<debt>` | What is owed on one credit line or loan; a liability, positive = owed (M0.1) | Never |
+
+Scoped accounts carry the id of their holding, line or debt (`ref_id` in SCHEMA §3.4). Until M0.1 the code has a single `investment` account.
 
 ```text
-balance(account) = Σ movements(account)
+balance(account[, ref]) = Σ movements(account[, ref])
 ```
 
-All balances are derived from movements. Cached balances, if any, must be reproducible from movements.
+All balances are derived from movements. Cached balances, if any, must be reproducible from movements. Investment **values** are not balances: they live in valuations (§6.11) and never move money.
 
 ### 6.2 Transaction Kinds
 
-Every financial event is one immutable `transaction` with one or more `movements`. `amount` is always positive.
+Every financial event is one immutable `transaction` with one or more `movements`. `amount` is positive (exceptions in SCHEMA §3.3).
 
 | Kind | Movements | Notes |
 |---|---|---|
-| `opening_balance` | `+amount` on its `account` | Onboarding only |
-| `income` | pool `+amount` | |
-| `business_cost` | pool `−amount` | Subscriptions, tools, tax, other |
-| `salary_payment` | pool `−amount`, personal `+amount` | `amount` = net paid (§6.3) |
-| `expense` | personal `−amount` | Needs / Wants / Growth / Unexpected |
-| `savings_deposit` | personal `−amount`, savings `+amount` | |
-| `savings_withdrawal` | savings `−amount`, personal `+amount` | |
-| `investment_contribution` | personal `−amount`, investment `+amount` | |
-| `investment_withdrawal` | investment `−amount`, personal `+amount` | |
-| `surplus_allocation` | pool `−amount`, savings or investment `+amount` | §6.6 |
-| `advance_disbursement` | pool `−amount`, personal `+amount` | §6.4 |
-| `advance_early_repayment` | personal `−amount`, pool `+amount` | §6.4 |
+| `opening_balance` | `+amount` on its account (`pool`, `personal`, `savings`, `investment:h`, `debt:d`) | Onboarding only |
+| `bill_reserve_set_aside` | personal `−a`, bill_reserve:l `+a` | Onboarding: an existing card balance set aside (M0.1) |
+| `income` | pool `+a` | |
+| `business_cost` | pool `−a` | Subscription costs carry `billing_cycle` (§6.8) |
+| `salary_payment` | pool `−a`, personal `+a` | `amount` = net paid (§6.3) |
+| `expense` — paid from Available Spending | personal `−a` | Default |
+| `expense` — paid with a credit line | personal `−a`, bill_reserve:l `+a`, debt:l `+a` | M0.1, §6.9 |
+| `expense` — installment purchase | none (the loan's `loan_start` carries the debt) | M0.1, §6.10; counts in Kakeibo at full price |
+| `debt_cost` on a credit line | personal `−a`, bill_reserve:l `+a`, debt:l `+a` | Interest, fees, late fees (M0.1) |
+| `debt_cost` on a loan | debt:d `+a` | Late fee, paid later with the installments (M0.1) |
+| `debt_payment` | see §6.9 and §6.10 | Source `personal` or `pool`; a Pool-sourced payment is a surplus allocation to a debt (M0.1) |
+| `debt_payoff` | source `−paid`, debt:d `−cleared` | Early payoff; interest saved = cleared − paid (M0.1) |
+| `loan_start` | debt:d `+total`; plus personal `+received` (personal cash loan) or pool `+received` (business loan); nothing else for an installment purchase | M0.1, §6.10 |
+| `credit_conversion` | bill_reserve:l `−r`, personal `+r`, debt:l `−a`, debt:loan `+total` | Card or PayLater purchase converted to installments (M0.1, §6.9) |
+| `savings_deposit` | personal `−a`, savings `+a` | |
+| `savings_withdrawal` | savings `−a`, personal `+a` | |
+| `investment_contribution` | personal `−a`, investment:h `+a` | |
+| `investment_sale` | investment:h `−cost_removed`, destination `+proceeds` | Destination personal or savings, chosen by the user (M0.1; replaces `investment_withdrawal`) |
+| `investment_income` | investment_cash:h `+a` | Dividends, coupons, deposit interest (M0.1) |
+| `investment_cash_withdrawal` | investment_cash:h `−a`, destination `+a` | Destination personal or savings (M0.1) |
+| `surplus_allocation` | pool `−a`, savings or investment:h `+a` | §6.6 |
+| `advance_disbursement` | pool `−a`, personal `+a` | §6.4 |
+| `advance_early_repayment` | personal `−a`, pool `+a` | §6.4 |
 | `reversal` | Negates the movements of `reverses_id` | §6.5, §6.7 |
 
-**Pool invariant.** A transaction that debits the Pool is valid only if the Pool's running balance, ordered by date, stays ≥ 0 on the transaction date and every later date. Equivalently, for a Pool debit `a` on date `d`: `min(balance(t) for t ≥ d) ≥ a`. Violations return a domain validation result with the maximum allowed amount.
+**Non-negative invariant.** A transaction that lowers a never-negative account is valid only if that account's running balance, ordered by date, stays ≥ 0 on the transaction date and every later date. For the Pool: for a debit `a` on date `d`, `min(balance(t) for t ≥ d) ≥ a`. Violations return a domain validation result with the maximum allowed amount. Paying more than is owed is therefore rejected.
 
 ### 6.3 Salary Payments
 
@@ -514,21 +552,148 @@ If an advance is already active, the remainder is added to it. The installment s
 ### 6.6 Surplus Allocation
 
 ```text
-safe_surplus = max(0, Pool − buffer_months × monthly_commitment)
+safe_surplus = max(0, own_pool − buffer_months × monthly_commitment)        (own_pool: §5.3)
 ```
 
-`buffer_months` defaults to 3 and is user-editable. Allocations above `safe_surplus` are allowed after showing the resulting runway. Only the Pool invariant is enforced.
+`buffer_months` defaults to 3 and is user-editable. Destinations: Savings, an investment holding, or a debt (a Pool-sourced `debt_payment`, §6.9–§6.10). Vanea does not suggest a destination. Allocations above `safe_surplus` are allowed after showing the resulting runway. Only the Pool invariant is enforced.
 
 ### 6.7 Corrections
 
 | Field type | Examples | How it changes |
 |---|---|---|
 | Financial | amount, date, kind, account | **Reversal + replacement.** The UI calls this "Edit", and the history shows both. |
-| Descriptive | note, source label, asset label, expense category, business cost category | Edited in place (`updated_at` changes) |
+| Descriptive | note, source label, asset label, expense category, business cost category, subscription label | Edited in place (`updated_at` changes) |
+| Records | subscriptions and their price rows, debts' descriptive fields, holdings, valuations | Edited in place or deleted; they never move money themselves |
 
 - A transaction can be reversed at most once. A reversal cannot be reversed.
 - Reversing a transaction that would break the Pool invariant is rejected, except income (§6.5).
 - Historical income months are evidence, not ledger records. They are edited in place, and an edit triggers re-evaluation.
+
+### 6.8 Subscriptions & Cost Spreading (M0.1)
+
+A subscription has a name, a billing cycle (`monthly` or `yearly`), a **price history** and a next billing date.
+
+```text
+price_at(s, date)        = price of the latest price row with effective_from ≤ date
+monthly_equivalent(s, d) = price_at(s, d)                if monthly
+                         = floor(price_at(s, d) / 12)    if yearly
+```
+
+**Spreading.** A `business_cost` in the Subscription category always has a `billing_cycle` (asked at entry, no default).
+
+```text
+monthly charge of a, paid in month m   → share a in m
+yearly charge of a, paid in month m    → share = floor(a / 12)
+                                         m        gets a − 11 × share
+                                         m+1…m+11 get share each
+other business costs                   → full amount in the month paid
+```
+
+The shares always add up to `a`. Cash still leaves the Pool in full on the payment date; spreading only changes `net(m)` (§5.2). Deleting the subscription does not remove shares of a charge already paid; reversing the charge removes all of them.
+
+**Confirming a billing.** The expected amount is `price_at(s, billing date)`.
+
+| Situation | Result |
+|---|---|
+| Entered amount = expected | Record the cost; advance the next billing date by one cycle |
+| Entered amount ≠ expected, user picks **Yes, from now on** | Record the cost; add a price row effective from the billing date (replacing one on the same date) |
+| Entered amount ≠ expected, user picks **Only this time** | Record the cost; no price row |
+| Skip | Nothing recorded; advance the next billing date |
+
+The next billing date keeps its day of month, clamped to the month's last day; yearly adds 12 months. An **announced change** is a price row with a future `effective_from`: reminders and commitments switch on that date. Past costs never change.
+
+**Impact of a price change**: the difference in `monthly_equivalent` and the runway before and after (one decimal), using `monthly_commitment` (§5.6).
+
+### 6.9 Credit Lines (M0.1)
+
+Credit cards and pay-next-month PayLater. Fields: name, type, optional limit, statement day, due day.
+
+| Event | Movements |
+|---|---|
+| Purchase (expense paid with the line) | personal `−a`, bill_reserve:l `+a`, debt:l `+a` |
+| Interest, fee, late fee (`debt_cost`) | personal `−a`, bill_reserve:l `+a`, debt:l `+a` |
+| Bill payment from Available Spending, amount `a` | debt:l `−a`, bill_reserve:l `−r`, personal `−(a − r)` |
+| Bill payment from the Pool, amount `a` | debt:l `−a`, pool `−a`, bill_reserve:l `−r`, personal `+r` |
+| Convert a purchase of `a` to installments | bill_reserve:l `−r`, personal `+r`, debt:l `−a`, debt:loan `+total` (§6.10) |
+
+with `r = min(a, bill_reserve:l)`, stored on the transaction as `reserve_part` so the movements are reproducible. Paying more than is owed is rejected.
+
+```text
+amount_due(l) = max(0, owed at the latest statement date − payments since that date)
+due_date(l)   = the first due day after the latest statement date
+older_debt(l) = max(0, owed − bill_reserve)        (balance not yet set aside)
+```
+
+At onboarding an existing balance is an `opening_balance` on `debt:l`, followed by a `bill_reserve_set_aside` of the same amount unless the user marks it as older debt.
+
+### 6.10 Installment Loans (M0.1)
+
+Online loans, bank loans, installment purchases, PayLater installments, card installment plans, personal loans. Fields: lender, type, purpose (`personal` or `business`), amount received, installment amount, number of installments `n`, frequency (`monthly` or `single`), first due date, OJK registration (online loans: yes / no / not sure).
+
+```text
+total            = installment × n
+cost             = total − received                       (cost of borrowing)
+interest_share_k = floor(cost / n), the last installment takes the remainder
+principal_share  = installment − interest_share_k
+due_date_k       = first_due_date + (k − 1) months        (monthly); first_due_date (single)
+```
+
+**Approximate yearly rate**, shown before saving:
+
+```text
+monthly: find r ≥ 0 with Σ_{k=1..n} installment / (1 + r)^k = received   (bisection)
+         yearly ≈ r × 12
+single:  r = cost / received over t days; yearly ≈ r × 365 / t
+cost ≤ 0 → 0%
+```
+
+Example: receive Rp 2.000.000, repay Rp 2.600.000 once after 30 days → r = 30%, yearly ≈ 365%.
+
+| Purpose / event | Movements |
+|---|---|
+| Personal cash loan starts | debt:d `+total`, personal `+received` |
+| Installment purchase starts | debt:d `+total` (the item is an `expense` with payment method *installment*, no cash movement) |
+| Business loan starts | debt:d `+total`, pool `+received` (marked borrowed) |
+| Installment paid | source `−a`, debt:d `−a` (source: personal for personal loans; pool for business loans, or pool as a surplus allocation) |
+| Late fee | debt:d `+a` |
+| Early payoff of `paid` | source `−paid`, debt:d `−cleared` (cleared = owed); interest saved = cleared − paid |
+
+```text
+installments_paid       = floor(Σ installment payments / installment)
+next_due                = due_date_(installments_paid + 1), late if before today
+principal_owed(d)       = received − Σ principal shares of the paid installments
+business_principal_owed = Σ principal_owed(d) over open business loans
+own_pool                = max(0, Pool − business_principal_owed)
+```
+
+The interest part of each business-loan payment counts as a business cost in `net(m)` (§5.2). A loan closes when owed reaches 0. Nothing changes automatically when an installment is missed.
+
+### 6.11 Investments (M0.1)
+
+A holding has a name, an asset class, an optional platform and a note. Asset classes and their **general** risk labels are a domain constant:
+
+| Asset class | Risk |
+|---|---|
+| `time_deposit`, `government_bond`, `money_market_fund` | low |
+| `fixed_income_fund` | low_medium |
+| `mixed_fund`, `gold` | medium |
+| `equity_fund`, `stock` | high |
+| `crypto_digital` | very_high |
+| `other` | set by the user |
+
+```text
+put_in(h)          = balance(investment:h)
+cash(h)            = balance(investment_cash:h)
+estimated_value(h) = latest valuation of h (value, as_of), or none
+is_stale(h)        = today − as_of > 90 days
+on_paper(h)        = estimated_value − put_in
+sale: cost_removed = put_in (sold all) or round(put_in × share sold)
+      realized_gain = proceeds − cost_removed               (negative = loss)
+allocation(class)  = Σ put_in of the class / Σ put_in
+concentration      = a class with risk high or very_high and allocation > 0.50
+```
+
+Valuations are records, not transactions: they never create movements. **Nothing in the salary engine, Pool, runway, safe surplus, daily allowance or any cash total reads `investment`, `investment_cash` or valuations** (PRD principle 14).
 
 ---
 
@@ -545,14 +710,17 @@ It rolls over between periods. It is not reset monthly: unspent salary stays the
 ### 7.2 Daily Allowance
 
 ```text
-next_payday = next date with day = payday_day strictly after today
-days_left   = days from today until next_payday (minimum 1)
-daily       = floor(max(Available Spending, 0) / days_left)
+next_payday   = next date with day = payday_day strictly after today
+days_left     = days from today until next_payday (minimum 1)
+due_before    = Σ unpaid installments of personal loans due in [today, next_payday)      (M0.1)
+              + Σ older_debt(l) of credit lines whose due date is in that window       (§6.9)
+daily         = floor(max(Available Spending − due_before, 0) / days_left)
 ```
 
 States:
 
 - Available Spending ≤ 0 → overspent state (DESIGN §4.2), no daily figure.
+- `due_before` > 0 → the line names it: "after Rp 650.000 in installments due before then".
 - Today is payday and the current period's entitlement is unpaid → "Salary due today" state.
 
 ### 7.3 Pace
@@ -567,6 +735,18 @@ show when base > 0 and spent_pct − elapsed_pct > 0.15
 ```
 
 > You've used 62% of this period's money, and 40% of the period has passed.
+
+### 7.4 Debts Overview (M0.1)
+
+```text
+total_owed           = Σ balance(debt:d) over open debts (salary advance listed separately)
+due_this_month       = Σ installments of personal loans due in the calendar month
+                     + Σ amount_due(l) of credit lines due in the month
+debt_payment_ratio   = due_this_month / salary
+show the calm card when debt_payment_ratio > DEBT_RATIO_THRESHOLD (0.30)
+```
+
+Business loans are paid from the Pool and are not part of the ratio; they appear in `monthly_commitment` (§5.6). The ratio never blocks a record and never ranks which debt to pay.
 
 ---
 
@@ -592,10 +772,20 @@ Requires 3 previous observed months (a month without spending still counts as ob
 
 ```text
 set_aside(m) = Σ savings_deposit + Σ investment_contribution
-             − Σ savings_withdrawal − Σ investment_withdrawal     (personal-sourced, month m)
+             − Σ savings_withdrawal
+             − Σ investment_sale and investment_cash_withdrawal paid to personal     (month m)
 ```
 
 The reflection compares it to the month's savings intention, and Wants spending to the optional Wants limit. No scores.
+
+**Debt and investment lines (M0.1)**, shown separately from Kakeibo spending:
+
+```text
+debt_payments(m)     = Σ personal debt_payment and debt_payoff amounts in m
+cost_of_borrowing(m) = Σ personal debt_cost in m + Σ interest shares of personal installments paid in m
+investment_income(m) = Σ investment_income in m
+realized_gains(m)    = Σ realized_gain of investment_sale in m
+```
 
 ---
 
@@ -604,7 +794,8 @@ The reflection compares it to the month's savings intention, and Wants spending 
 | Notification | When | Default |
 |---|---|---|
 | Payday | Payday at 09:00, if the entitlement is unpaid | On |
-| Recurring cost due | Due date at 09:00 | On |
+| Subscription renews | Billing date at 09:00 | On |
+| Debt due | Due date at 09:00 for installments and credit line bills (M0.1) | On |
 | New month | 1st of month at 19:00: reflect on last month, set this month's intention | On |
 | Salary pressure | `SERIOUS` level, at most once per month | On |
 | Backup | Last export > 30 days ago, at most once per month | On |
@@ -665,6 +856,11 @@ Raise eligibility is shown quietly on the Salary screen. The product must not pr
 8. Historical income months never create movements.
 9. A transaction is reversed at most once, and reversals are never reversed.
 10. Same inputs → same outputs (no hidden clock or randomness in `src/domain`; "today" is passed in).
+11. Savings, every holding's put in and cash, every bill reserve and every debt's owed amount stay ≥ 0 on every date (M0.1).
+12. The shares of a yearly charge add up exactly to its amount (M0.1).
+13. Loan money received, investment income and sale proceeds never appear in `net(m)` (M0.1).
+14. The salary engine, runway, safe surplus and daily allowance give the same result whatever the investment valuations are (M0.1).
+15. `own_pool ≤ Pool` always (M0.1).
 
 ---
 
