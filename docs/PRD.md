@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -57,7 +57,7 @@ People with variable income — freelancers, creators, contractors, side-hustler
 - Budgeting by envelopes or detailed per-category budgets (only an optional Wants limit).
 - Gamification: scores, streaks, badges, leaderboards.
 - Multi-currency, iOS, cloud sync, multi-device, shared/family use.
-- Tax calculation (tax payments can be recorded as a business cost).
+- Tax calculation or tax reserves (tax payments, if any, can be recorded as a business cost).
 
 ---
 
@@ -320,6 +320,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | Performance | Dashboard < 1.5 s from cold start with 5 years of data. |
 | Accessibility | TalkBack labels, font scaling to 200%, 48 dp touch targets, WCAG AA contrast, meaning never conveyed by color alone. |
 | Correctness | Domain logic is pure, deterministic and tested (SYSTEM-OVERVIEW §12). |
+| Maintainability | One function, one job; large or multi-decision functions are split into private helpers; files group related functions by concern, never one file per function (SYSTEM-OVERVIEW §3.3). |
 
 ---
 
@@ -354,11 +355,11 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 
 ## 14. Open Questions
 
-1. **Multi-currency.** Is any income received in USD (Upwork, PayPal, etc.)? v1 assumes IDR only; foreign income would be recorded at the rupiah amount actually received.
-2. **Tax reserve.** Should a percentage of each income be reserved for tax (e.g. PPh final 0.5%)? v1 records tax only as a business cost.
-3. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
-4. **iOS.** When, if ever?
-5. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
+Resolved: income is IDR only (no USD income), and there is no tax reserve in v1.
+
+1. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
+2. **iOS.** When, if ever?
+3. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
 
 ---
 
@@ -381,3 +382,6 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | 13 | **Daily allowance** and **pace** added | Core awareness differentiator |
 | 14 | Kakeibo **start-of-month intention** added | Kakeibo has two moments; v1 had only the end of month |
 | 15 | One money format `Rp 4.250.000` | v1 mixed `Rp 4.250.000` and `Rp5,000,000` |
+| 16 | IDR only; no multi-currency | Owner has no USD income |
+| 17 | No tax reserve in v1 | Owner decision |
+| 18 | Code organization rules: one function one job, private helpers, files grouped by concern | Owner decision; keeps the domain readable and testable |

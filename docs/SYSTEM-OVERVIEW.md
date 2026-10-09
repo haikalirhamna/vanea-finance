@@ -1,6 +1,6 @@
 # Vanea — System Overview & Domain Specification
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Draft for review
 **Last updated:** 2026-10-09
 
@@ -51,25 +51,52 @@ Set `android.allowBackup: false`. Android Auto Backup would copy the encrypted d
 
 ---
 
-## 3. Project Structure & Boundaries
+## 3. Project Structure & Code Organization
+
+### 3.1 Structure
+
+Files are grouped by **concern**, not one file per function (§3.3).
 
 ```text
-app/                  Expo Router screens — render, navigate, call feature hooks
+app/                          Expo Router screens — render, navigate, call feature hooks
 src/
-  domain/             Pure TypeScript — all financial rules (no React, no Expo, no SQLite)
-    config.ts         All tunable constants (§5.1)
-    money.ts          Integer rupiah helpers, rounding
-    months.ts         Calendar months, monthly net income (§5.2)
-    ledger/           Accounts, transaction kinds, movements, reversals, invariants (§6)
-    salary/           Recommendation, raise gates, changes, pressure (§5)
-    insights/         Daily allowance, pace, reflection highlights (§7, §8)
-  data/               SQLite schema, migrations, repositories, backup export/import
-  features/           Hooks and feature-specific components (dashboard, income, salary, …)
-  components/         Shared UI components
-  lib/                Formatting (money, dates), notifications, security helpers
+  domain/                     Pure TypeScript — all financial rules (no React, no Expo, no SQLite)
+    config.ts                 All tunable constants (§5.1)
+    money.ts                  Integer rupiah arithmetic and rounding
+    calendar.ts               Dates, months, salary periods, payday math
+    statistics.ts             Median, mean, usual swing
+    ledger.ts                 Accounts, transaction kinds, movements, balances, Pool invariant, reversals (§6.1, §6.2, §6.7)
+    income-history.ts         Monthly net income series (§5.2)
+    pool.ts                   Monthly commitment, runway, safe surplus (§5.6, §6.6)
+    salary-recommendation.ts  Sustainable salary, recommendation, explanation, depletion month (§5.3)
+    salary-review.ts          Five gates and evaluation result (§5.4)
+    salary-change.ts          Initial, calibration, increase, decrease, restore rules (§5.5)
+    salary-payment.ts         Entitlement, partial payment, top-up (§6.3)
+    salary-advance.ts         Advance limits, installments, outstanding, income-reversal remainder (§6.4, §6.5)
+    salary-pressure.ts        Pressure levels and safe salary (§5.6)
+    spending.ts               Available Spending, daily allowance, pace (§7)
+    reflection.ts             Highlights, set-aside, intention vs actual (§8)
+    __tests__/                One test file per module (e.g. salary-review.test.ts)
+  data/
+    database.ts               Open encrypted DB, key handling, migrations runner
+    schema.ts                 Table definitions and migrations
+    profile.ts                Profile and settings
+    transactions.ts           Transactions and movements (append-only writes)
+    salary.ts                 Salary settings, evaluations, advances
+    recurring-costs.ts        Subscriptions
+    planning.ts               Historical income months, intentions, reflections
+    backup.ts                 Export and import
+  features/<feature>/         One folder per feature (dashboard, income, salary, spending, reflection, settings)
+    <feature>-hooks.ts        All hooks of the feature in one file
+    components/               Feature-specific components, grouped by screen section
+  components/                 Shared UI components
+  lib/
+    format.ts                 Money, number and date formatting
+    notifications.ts          Local notification scheduling
+    security.ts               App lock and key storage helpers
 ```
 
-Dependency rules:
+### 3.2 Dependency Rules
 
 | Layer | May import |
 |---|---|
@@ -79,13 +106,50 @@ Dependency rules:
 
 Screens contain no financial rules. A screen asks a hook for a value; the hook reads records through `src/data` and computes with `src/domain`.
 
----
+### 3.3 Code Organization Rules
+
+These rules apply to every layer.
+
+1. **One function, one job.** A function makes one decision or performs one transformation.
+2. **Split instead of growing.** If a function handles several decisions, or grows beyond about 30 lines, extract each decision into a **private helper** (not exported) in the same file.
+3. **Exports are the public API.** A module exports only what other modules or layers use. Everything else stays private.
+4. **Group by concern, not by function.** Related functions live together in one file named after the concern — `authentication.ts` holding `login` and `logout`, not `login.ts` and `logout.ts`. A new file is created only for a new concern.
+5. **Split a file only when it holds two concerns** or becomes hard to navigate (roughly 400 lines). Split by concern, never into one file per function.
+6. **Tests mirror modules:** one test file per module, testing exported functions. Private helpers are covered through them.
+
+Example — `salary-review.ts`:
+
+```ts
+// Public API: the only export.
+export function evaluateRaise(input: RaiseInput): RaiseEvaluation {
+  return (
+    checkEnoughData(input) ??
+    checkCooldown(input) ??
+    checkRealShift(input) ??
+    checkNotSeasonal(input) ??
+    checkAffordable(input) ??
+    eligible(input)
+  );
+}
+
+// Private helpers: one gate or one calculation each.
+function checkEnoughData(input: RaiseInput): RaiseEvaluation | null { … }
+function checkCooldown(input: RaiseInput): RaiseEvaluation | null { … }
+function checkRealShift(input: RaiseInput): RaiseEvaluation | null { … }
+function checkNotSeasonal(input: RaiseInput): RaiseEvaluation | null { … }
+function checkAffordable(input: RaiseInput): RaiseEvaluation | null { … }
+function eligible(input: RaiseInput): RaiseEvaluation { … }
+function referenceIncome(months: MonthlyIncome[]): number { … }
+function shiftThreshold(referenceWindow: number[]): number { … }
+```
+
+Lint signals (warnings, reviewed by hand): ESLint `max-lines-per-function` (40), `complexity` (10), `max-lines` (400).
 
 ## 4. Conventions
 
 | Topic | Rule |
 |---|---|
-| Currency | IDR only in v1. |
+| Currency | IDR only. Income received in other currencies is out of scope. |
 | Money | **Integer rupiah** (`number`, always an integer). No floating-point money is stored. Intermediate ratios may be floats; results are rounded down to integer rupiah unless stated. |
 | Dates | Local calendar dates as `YYYY-MM-DD`. The device time zone defines "today". |
 | Months | `YYYY-MM`. A month is **completed** when today is in a later month. |
@@ -560,7 +624,7 @@ Raise eligibility is shown quietly on the Salary screen. The product must not pr
 
 | Level | Scope | Target |
 |---|---|---|
-| Unit | Every function in `src/domain` | ≥ 95% line coverage on `src/domain` |
+| Unit | Every exported function in `src/domain`, one test file per module | ≥ 95% line coverage on `src/domain` |
 | Property / invariant | Random transaction sequences (`fast-check`) | All invariants below hold |
 | Scenario | Fixed examples and lifecycle scenarios from §5.8 | Same statuses as the reference implementation |
 | Parity | TypeScript engine vs `salary_engine_simulation.py` on shared fixture files | Identical outputs |
