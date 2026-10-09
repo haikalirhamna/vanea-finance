@@ -1,18 +1,22 @@
 # Vanea — Design System & UX Direction
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Draft for review
 **Last updated:** 2026-10-09
 
-The visual design is rebuilt around the product philosophy: a calm decision partner, not a recorder.
+Vanea is a calm decision partner, not a recorder. Version 2.1 gives it a modern visual identity — deep violet gradients, soft curved surfaces, a floating action layer — taken from a reference design (§8.1) and tuned so it stays calm.
 
 ---
 
 ## 1. Design Goal
 
-Vanea should feel calm, premium, editorial, focused, trustworthy, deliberate and financially disciplined.
+Vanea should feel **calm, modern, premium**, focused, trustworthy, deliberate and financially disciplined.
 
-Avoid: generic fintech dashboards, colorful budgeting games, SaaS admin panels, spreadsheet-like mobile UI, chart-heavy financial terminals.
+- **Calm** comes from deep tones, generous space, one vivid element per screen and static decoration.
+- **Modern** comes from shape: curved hero areas, a content sheet that rises over them, a floating action card, pill buttons, soft depth and a center action button.
+- **Not boxes.** Content sits directly on surfaces with space and dividers; cards are reserved for things that deserve to stand out.
+
+Avoid: busy fintech super-app home screens (promo banners, service grids, red badges), colorful budgeting games, SaaS admin panels, spreadsheet-like mobile UI, chart-heavy financial terminals.
 
 ---
 
@@ -72,37 +76,49 @@ All numbers use Indonesian formatting, because every amount is in rupiah:
 ### 4.1 Normal state
 
 ```text
-AVAILABLE SPENDING
-Rp 4.250.000
-Rp 141.000 a day until 25 Oct
+╭────────────────────────────────────────╮  ← hero canvas: deep violet gradient + soft glow (top right)
+│ Good morning                     [ ◔ ] │     header icon button (notification history)
+│                                        │
+│           AVAILABLE SPENDING           │     overline, white 72%
+│            Rp 4.250.000                │     hero amount, white, tabular; "Rp" smaller
+│     Rp 141.000 a day until 25 Oct      │     white 72%
+│                                        │
+│   ╭────────────────────────────────╮   │  ← floating action card straddles the seam
+╰───│  [↓]     [▤]      [⇄]     [◷]  │───╯
+    │ Income  Pay salary Debts History│
+    ╰────────────────────────────────╯
+  ╭──────────────────╮ ╭──────────────────╮  ← duo cards on the content sheet
+  │ (◎)           ◯  │ │ (◎)           ◯  │     deep / vivid gradients, static orbs
+  │ Salary           │ │ Pool             │
+  │ Rp 8.000.000     │ │ Rp 14.000.000    │
+  │ Next 25 Oct      │ │ Covers 1,6 months│
+  ╰──────────────────╯ ╰──────────────────╯
 
-Salary              Pool
-Rp 8.000.000        Rp 14.000.000
-                    Covers 1,6 months
+  Recent spending                   See all     ← rows sit on the sheet, no boxes
+  [▢] Groceries · Needs          Rp 230.000
+  [▢] Coffee · Wants              Rp 45.000
 
-[ + Expense ]   [ + Income ]
+  October reflection                     →
 
-Recent spending
-  Groceries · Needs                 Rp 230.000
-  Coffee · Wants                     Rp 45.000
-
-October reflection →
+╭──────[⌂]─────[▥]─────(＋)─────[✎]─────[⋯]──────╮  ← bottom bar; center action with glow
+     Home   Salary   Expense  Reflect   More
 ```
 
 - The hero number and the daily allowance are the only large elements.
 - "Covers 1,6 months" is the runway (Pool ÷ salary and subscriptions).
-- The two primary actions sit within thumb reach at the bottom of the screen.
+- The center action adds an expense (the most frequent action) and sits in thumb reach. A long press opens the add menu: Income, Business cost, Debt payment, Savings.
+- The floating action card holds the next most-used destinations. It never holds promotions.
 
 ### 4.2 States
 
 | State | Hero area shows |
 |---|---|
-| Overspent | `−Rp 300.000` · "You've spent Rp 300.000 more than your salary. Your next salary will cover it." No red background; a single neutral-warning accent on the amount. |
-| Salary due | "Payday today · Pay yourself Rp 8.000.000" with a **Pay salary** button above the hero. |
+| Overspent | `−Rp 300.000` in the caution tone for dark surfaces · "You've spent Rp 300.000 more than your salary. Your next salary will cover it." The hero gradient stays the same; no red. |
+| Salary due | "Payday today · Pay yourself Rp 8.000.000" with an inverted **Pay salary** pill (white fill, deep violet label) inside the hero, above the amount. |
 | Pool too small for full salary | Same as Salary due, plus "Your Pool can pay Rp 3.500.000 of it." |
 | Pace ahead | One line under the daily allowance: "You've used 62% of this period's money; 40% of the period has passed." |
-| Salary pressure | A single card below Salary/Pool (§6.4). Never more than one card at a time. |
-| Raise eligible | A quiet line in the Salary block: "Salary review available". No badge, no color, no notification. |
+| Salary pressure | A single pressure card on the sheet, directly under the duo cards (§6.4). Never more than one at a time. |
+| Raise eligible | A small quiet pill inside the Salary duo card: "Review available". No badge dot, no glow, no notification. |
 
 ---
 
@@ -110,7 +126,9 @@ October reflection →
 
 Order: Welcome → Payday → Income history → Current money → Subscriptions → Salary recommendation → Privacy & backup → Dashboard.
 
-- One question per screen. Every step except Payday and Current money can be skipped.
+- The Welcome screen uses the hero canvas full-height with the orb motif and one primary pill. Every following step uses the light sheet with a large title.
+- One question per screen. A thin progress line at the top (not steps to "complete" or celebrate).
+- Every step except Payday and Current money can be skipped.
 - Income history is a simple list of months (newest first) with one amount field each, labeled "after business costs".
 - Current money is split into four fields with short explanations: Pool ("income you haven't paid yourself yet"), Available Spending ("money for your personal spending"), Savings, Investments.
 - The privacy screen states plainly: "Your data lives only on this phone. If you uninstall Vanea or lose your phone without a backup, it's gone."
@@ -119,7 +137,11 @@ Order: Welcome → Payday → Income history → Current money → Subscriptions
 
 ## 6. Salary Screens
 
+The Salary tab opens with a compact hero (current salary and next payday) and the sheet below. A single restrained chart shows monthly net income as rounded bars with the salary as a dashed line (§8.9).
+
 ### 6.1 Recommendation
+
+The recommended amount sits in the hero; the explanation sits on the sheet.
 
 ```text
 RECOMMENDED SALARY
@@ -132,8 +154,8 @@ could still pay Rp 5.300.000 for 3 months.
 
 Based on 6 months of income. More history makes this more reliable.
 
-[ Use Rp 5.300.000 ]
-[ Choose another amount ]
+[ Use Rp 5.300.000 ]          ← primary pill
+[ Choose another amount ]     ← secondary pill
 ```
 
 Choosing an amount above the recommendation shows a disclosure before confirming:
@@ -164,6 +186,8 @@ You may increase your salary by up to Rp 250.000 (5%).
 [ Keep Rp 5.000.000 ]
 ```
 
+The three decision buttons are **equal-weight secondary pills**: no glow, no gradient, same size. Keeping the salary must look exactly as available as raising it (§9).
+
 **Not eligible** — one message per status:
 
 | Status | Message |
@@ -182,14 +206,14 @@ You may increase your salary by up to Rp 250.000 (5%).
 
 ### 6.4 Salary pressure card
 
-| Level | Card |
+| Level | Presentation |
 |---|---|
-| `THIN_BUFFER` | "Your Pool covers less than one month of salary." (one line, no card) |
-| `INFO` | "Your salary is above your typical income of the last 3 months (Rp 4.600.000). At this pace your Pool lasts about 9 months." (one line, no card) |
-| `ATTENTION` | Card: "Your Pool may run out in about 5 months." + evidence + "A salary of Rp 4.300.000 would be sustainable." + **Review salary** / **Not now** |
+| `THIN_BUFFER` | One line under the Pool duo card: "Your Pool covers less than one month of salary." |
+| `INFO` | One line: "Your salary is above your typical income of the last 3 months (Rp 4.600.000). At this pace your Pool lasts about 9 months." |
+| `ATTENTION` | Pressure card: "Your Pool may run out in about 5 months." + evidence + "A salary of Rp 4.300.000 would be sustainable." + **Review salary** / **Not now** |
 | `SERIOUS` | Same card, wording "in about 2 months". |
 
-Calm typography; one accent color for `ATTENTION` and `SERIOUS`. Never flashing, never full-screen.
+The pressure card is a white surface (radius 20, soft elevation) with a caution-tinted icon tile on the left. The caution tone appears only in that tile and the key figure — never as a full-color card. Never flashing, never full-screen. **Review salary** and **Not now** are equal-weight secondary pills.
 
 ### 6.5 Pay salary
 
@@ -202,7 +226,7 @@ You receive                  Rp 7.000.000
 
 Pool after payment           Rp 7.000.000
 
-[ Record payment ]
+[ Record payment ]           ← primary pill with glow
 ```
 
 Copy reminds the user that Vanea records, it doesn't transfer: "Move the money in your bank app, then record it here."
@@ -222,19 +246,26 @@ Limit for Wants (optional)
 Rp [            ]
 ```
 
+Presented as a bottom sheet over the dashboard (radius 28 top corners) with a large amount field.
+
 ### 7.2 End of month — reflection
 
 ```text
 SEPTEMBER REFLECTION
 
-How much did I receive?          Rp 8.000.000
-How much did I want to set aside? Rp 1.000.000
-How much did I spend?            Rp 6.700.000
-  Needs        Rp 3.900.000
-  Wants        Rp 1.600.000
-  Growth         Rp 600.000
-  Unexpected     Rp 600.000
-How much did I set aside?        Rp 900.000
+╭──────────────────╮ ╭──────────────────╮   ← duo cards (deep / vivid)
+│ (↓) Received     │ │ (↑) Spent        │
+│ Rp 8.000.000     │ │ Rp 6.700.000     │
+╰──────────────────╯ ╰──────────────────╯
+
+How much did I want to set aside?  Rp 1.000.000
+How much did I set aside?          Rp 900.000
+
+How much did I spend?
+  Needs        Rp 3.900.000   ▬▬▬▬▬▬▬▬▬
+  Wants        Rp 1.600.000   ▬▬▬▬
+  Growth         Rp 600.000   ▬▬
+  Unexpected     Rp 600.000   ▬▬
 
 Worth noticing
 Wants rose from Rp 1.200.000 to Rp 1.600.000 compared with your last 3 months.
@@ -247,26 +278,175 @@ Notes for each category (optional)
 
 - No score, no grade, no streak.
 - At most two "Worth noticing" items.
+- Category share bars are thin, rounded, one violet tint for every category (no category colors). They show proportion of spending only.
 - Intention vs actual is shown as two plain amounts, never as a percentage bar.
 
 ---
 
 ## 8. Visual Language
 
-### Typography
+### 8.1 Reference analysis
 
-Numerical readability first: tabular figures, clear size hierarchy (hero amount ≫ section amounts ≫ body), editorial character in headings.
+The visual base comes from a violet fintech reference (light lavender canvas, deep violet hero, floating white action card, tinted icon tiles, center scan button, dark and vivid duo cards, rounded bar chart, pill buttons with glow).
 
-### Color
+| From the reference | Vanea's decision |
+|---|---|
+| Deep violet hero with gradient, white amount | **Take.** The hero canvas holds Available Spending. |
+| White action card floating over the hero edge | **Take.** Holds four destinations; never promotions. |
+| Large corner radii, content panel with rounded top | **Take.** Content sheet with 28 dp top corners. |
+| Soft lavender canvas and soft shadows | **Take.** |
+| Tinted rounded icon tiles | **Adapt.** Monochrome violet tints; the reference's red/orange/green/pink icons become one violet. |
+| Center circular button with glow in the bottom bar | **Adapt.** Becomes **Add expense**; the only glowing element besides the primary pill. |
+| Dark + vivid duo cards with large faded circles | **Adapt.** Salary/Pool and Received/Spent; the vivid card is toned down. |
+| Rounded bar chart, income vs expense | **Adapt.** One chart per screen at most: monthly net income vs salary line. |
+| Pill primary button with violet glow | **Take.** Only for one primary action per screen. |
+| Header icon buttons in rounded squares | **Take.** |
+| "Total Balance" as the statistics hero | **Leave.** Total wealth is never the dominant number. |
+| Promo & discount banners | **Leave.** No marketing inside a calm finance app. |
+| Payment service grid, contacts, send/request money | **Leave.** Vanea records; it does not move money. |
+| Avatar photos, notification badges | **Leave.** Initials only if ever needed; no red badges. |
 
-- Restrained neutral base, one primary accent.
-- One semantic warning tone for overspent, `ATTENTION` and `SERIOUS`. No red/green money coloring.
-- **Category colors are not used.** Categories are identified by label.
-- Light and dark themes, following the system setting.
+### 8.2 Color
 
-### Surfaces
+Light theme tokens:
 
-Open space, typography and minimal dividers. Group meaningfully. Avoid stacked cards; at most one card on the dashboard (salary pressure).
+| Token | Hex | Use |
+|---|---|---|
+| `violet-950` | `#1A0B45` | Hero start, deep duo card |
+| `violet-900` | `#26105F` | Deep duo card end, dark text on tints |
+| `violet-800` | `#35168A` | Hero end; label on inverted pills |
+| `violet-700` | `#4A20B8` | Icons, links, vivid duo card end |
+| `violet-600` | `#6230E0` | **Vivid accent**: primary pill, center action, active tab |
+| `violet-500` | `#7C52F0` | Gradient highlights, focus ring, hero glow |
+| `violet-300` | `#B8A2F7` | Chart bars (past months), share bars |
+| `violet-200` | `#D9CCFB` | Disabled accents, chart grid accents |
+| `violet-100` | `#ECE6FD` | Icon tile on emphasis, selected chip |
+| `violet-50` | `#F5F2FE` | Icon tile background, secondary pill fill |
+| `ink-900` | `#15121F` | Primary text |
+| `ink-600` | `#5F5A70` | Secondary text |
+| `ink-400` | `#9A96A8` | Inactive tab icons, placeholder (never essential text) |
+| `line` | `#E9E7F0` | Dividers, outlines |
+| `field` | `#EFEDF5` | Input and search fill |
+| `canvas` | `#F6F5FA` | Screen background (the sheet) |
+| `surface` | `#FFFFFF` | Floating card, pressure card, bottom bar |
+| `caution-600` | `#9A5B13` | Caution text on light surfaces |
+| `caution-100` | `#FDF1DE` | Caution icon tile |
+| `caution-300` | `#F4C27A` | Caution figure on dark surfaces (overspent amount) |
+| `on-deep` | `#FFFFFF` | Text on hero and duo cards |
+| `on-deep-muted` | `rgba(255,255,255,0.72)` | Secondary text on deep surfaces |
+
+Rules:
+
+- **Saturation budget:** per screen, one vivid element (the primary pill *or* the center action) plus the deep hero. Everything else is neutral or a pale violet tint.
+- **Deep before bright.** Large areas use `violet-950`–`violet-800`, never `violet-600`.
+- One caution tone (amber) for overspent, `ATTENTION` and `SERIOUS`. **No red or green money**, no green "gain" or red "loss".
+- **No category colors.** Categories are identified by label and, where needed, one neutral icon.
+
+### 8.3 Gradients & decoration
+
+| Token | Definition | Use |
+|---|---|---|
+| `gradient-hero` | Linear 165°, `violet-950` → `violet-800`, plus a radial glow of `violet-500` at 35% opacity centered top-right (radius ≈ 60% of width) | Hero canvas, Welcome screen |
+| `gradient-primary` | Linear 135°, `#7C52F0` → `#5626D6` | Primary pill, center action |
+| `gradient-deep` | Linear 150°, `violet-950` → `violet-900` | Deep duo card |
+| `gradient-vivid` | Linear 150°, `#5A2BD8` → `violet-700` | Vivid duo card (toned down from the reference) |
+
+**Orb motif** (from the reference's faded circles): on deep and vivid surfaces only, one large circle about 1,2× the card height, white at 6% opacity, offset to the bottom-right and clipped by the card; optionally one thin ring (1 dp, white 8%). Orbs are **static**, never animated, and never behind text.
+
+### 8.4 Shape
+
+| Token | Radius | Use |
+|---|---|---|
+| `radius-xs` | 8 dp | Tags, small chips |
+| `radius-sm` | 12 dp | Inputs, search fields, header icon buttons |
+| `radius-md` | 16 dp | Icon tiles, list-row icons, small cards |
+| `radius-lg` | 20 dp | Floating action card, duo cards, pressure card |
+| `radius-xl` | 28 dp | Content sheet and bottom sheets (top corners), bottom bar (top corners) |
+| `radius-full` | — | Pill buttons, center action, segmented selectors, chart bars |
+
+Spacing follows a 4 dp grid (4, 8, 12, 16, 20, 24, 32, 40). Screen gutter: 20 dp.
+
+### 8.5 Depth
+
+| Token | Value | Use |
+|---|---|---|
+| `elevation-0` | none | Lists and text on the sheet |
+| `elevation-soft` | `0 2 8 rgba(26,11,69,0.05)` | Pressure card, inputs on focus |
+| `elevation-float` | `0 12 32 rgba(26,11,69,0.10)` | Floating action card, bottom bar |
+| `glow-primary` | `0 10 24 rgba(98,48,224,0.35)` | Primary pill and center action **only** |
+
+At most one floating layer per region: the floating card *or* a bottom sheet, never stacked cards.
+
+### 8.6 Typography
+
+| Role | Font | Size / line | Notes |
+|---|---|---|---|
+| Hero amount | Inter Bold | 40 / 48 | Tabular figures, −0,5 letter spacing; the `Rp` prefix at 24 and 72% opacity |
+| Screen title | Plus Jakarta Sans SemiBold | 20 / 28 | |
+| Section heading | Plus Jakarta Sans SemiBold | 16 / 24 | |
+| Amount in rows and cards | Inter SemiBold | 16–22 | Tabular figures |
+| Body | Inter Regular | 15 / 22 | |
+| Caption | Inter Medium | 13 / 18 | |
+| Overline | Inter SemiBold | 12 / 16 | Uppercase, +0,8 letter spacing ("AVAILABLE SPENDING") |
+
+- Inter carries every number (reliable tabular figures). Plus Jakarta Sans — a geometric typeface designed in Jakarta — gives headings their modern character.
+- Both fonts are bundled with the app (works offline).
+
+### 8.7 Signature components
+
+| Component | Specification |
+|---|---|
+| **Hero canvas** | `gradient-hero`, light status-bar icons, content in `on-deep`. Bottom edge hidden by the sheet. |
+| **Content sheet** | `canvas` background rising over the hero, `radius-xl` top corners. |
+| **Floating action card** | `surface`, `radius-lg`, `elevation-float`, straddles the hero/sheet seam; four items, each an icon tile + caption. |
+| **Icon tile** | 48 dp, `radius-md`, `violet-50` fill, 24 dp `violet-700` line icon (1,75 dp stroke). On deep surfaces: white 12% fill, white icon. |
+| **Duo cards** | Two side by side, `radius-lg`, `gradient-deep` and `gradient-vivid`, orb motif, a 32 dp circular badge (white 16%) with an icon top-left, label and amount in `on-deep`. |
+| **Bottom bar** | `surface`, `radius-xl` top corners, `elevation-float`; four tabs (Home, Salary, Reflection, More) around a 60 dp center action in `gradient-primary` with `glow-primary`, seated in a curved cradle. Active tab `violet-600`, inactive `ink-400`, always with labels. |
+| **Primary pill** | 52 dp high, `radius-full`, `gradient-primary`, white label, `glow-primary`. One per screen. On deep surfaces it inverts: white fill, `violet-800` label, no glow. |
+| **Secondary pill** | 52 dp, `violet-50` fill, `violet-700` label. Used for equal-weight decisions. |
+| **Text button** | `violet-700` label, no fill. |
+| **Header icon button** | 40 dp, `radius-sm`; light: `surface` with 1 dp `line`; deep: white 10% fill with white 18% border. |
+| **Input / search** | 48 dp, `field` fill, `radius-sm`, no border; focus ring 2 dp `violet-500`. Amount fields use Inter 32 with tabular figures. |
+| **Segmented selector** | Pill with 1 dp `line` border ("Month ▾"); selected segment `violet-100`. |
+| **List row** | On the sheet without its own box: icon tile, title, secondary line, amount right-aligned; 64 dp; inset divider. |
+| **Pressure card** | `surface`, `radius-lg`, `elevation-soft`, caution icon tile, text, two secondary pills. |
+
+### 8.8 Iconography
+
+Rounded line icons, 24 dp, 1,75 dp stroke, one weight throughout. Filled icons only for the active tab. No multicolor or emoji icons.
+
+### 8.9 Charts
+
+- At most **one chart per screen**.
+- Rounded pill bars (8 dp wide, `radius-full` tops): past months `violet-300`, the selected or current month `violet-600`.
+- The salary appears as a dashed `ink-400` line, labeled at its right end.
+- Dashed `line` grid at three levels; no legend unless two series are shown.
+- Values appear on tap, not printed on every bar.
+- Investment values are never charted on the dashboard or salary screens.
+
+### 8.10 Dark theme
+
+Follows the system setting.
+
+| Token | Dark value |
+|---|---|
+| `canvas` | `#0F0B1A` |
+| `surface` | `#18132A` (floating card, bottom bar, pressure card) |
+| `field` | `#221B38` |
+| `line` | `rgba(255,255,255,0.08)` |
+| `ink-900` / `ink-600` | `#F3F1F8` / `#ADA8BD` |
+| `violet-50` (tile) | `rgba(124,82,240,0.16)` |
+| Hero and duo gradients | Unchanged |
+
+In dark mode, soft shadows give way to 1 dp `line` borders; `glow-primary` stays.
+
+### 8.11 Implementation notes (Expo)
+
+- Gradients: `expo-linear-gradient`; the radial hero glow and orbs: `react-native-svg`.
+- Colored shadows: the React Native `boxShadow` style (New Architecture), because Android `elevation` cannot be tinted.
+- The bottom-bar cradle: an SVG path behind the center action.
+- Fonts: `expo-font` with the bundled Inter and Plus Jakarta Sans packages.
+- All tokens live in one theme module in `src/components` and are the only source of colors, radii, spacing and shadows.
 
 ---
 
@@ -277,7 +457,7 @@ Open space, typography and minimal dividers. Group meaningfully. Avoid stacked c
 - Vanea recommends; the user decides.
 - Never refuse a real-world record; warn instead.
 - Progressive disclosure: "Why this amount" and evidence are one tap away, not hidden.
-- No dark patterns. The "decline" option is as visible as "accept".
+- No dark patterns. The "decline" option is as visible as "accept": decisions that should be neutral use equal-weight secondary pills, never a glowing primary.
 - Never pressure users to raise their salary, save, invest or reach a Pool target.
 
 ---
@@ -300,7 +480,18 @@ There is no notification for raise eligibility.
 
 ## 11. Motion
 
-Motion communicates state changes, confirmation, progress or navigation. It never decorates financial information. Respect the system "remove animations" setting.
+Motion communicates state changes, confirmation, progress or navigation. It never decorates financial information.
+
+| Moment | Motion |
+|---|---|
+| App open | The content sheet rises over the hero (250 ms, ease-out) |
+| Press | Pills and the center action scale to 0,96 |
+| Add flows | Bottom sheets slide up (220 ms) |
+| Saved | A short check on the pill, then return |
+
+- Money never counts up or animates its digits.
+- Orbs and gradients never move.
+- Respect the system "remove animations" setting: everything becomes an instant change.
 
 ---
 
@@ -320,27 +511,53 @@ Every error explains (1) what happened, (2) why, and (3) what the user can do.
 > The passphrase doesn't match this file.
 > Check the passphrase and try again. Vanea can't recover a forgotten passphrase.
 
+Errors appear inline under the field or as a bottom sheet — never as a red full-width banner. They use `ink-900` text with a caution icon tile.
+
 ---
 
 ## 13. Visual Anti-patterns
 
-Avoid: excessive cards, rainbow category colors, large chart collections, gamified scores, fake precision, compact money notation, dense tables as default, constant warning colors, accounting terminology in the UI.
+Avoid:
+
+- Grids of identical boxes; cards inside cards; every list row in its own card.
+- More than one vivid element per screen; glow on anything but the single primary action.
+- Promo banners, service grids, red notification badges.
+- Rainbow or per-category colors; green gains and red losses.
+- Large chart collections; more than one chart per screen.
+- Animated decoration (moving orbs, shimmering gradients, counting numbers).
+- Gamified scores, fake precision, compact money notation, dense tables as default.
+- Constant warning colors; accounting terminology in the UI.
 
 ---
 
 ## 14. Accessibility
 
-- WCAG AA contrast in both themes.
-- Font scaling up to 200% without clipping amounts; amounts may wrap below their labels.
-- Touch targets ≥ 48 dp.
+- WCAG AA contrast in both themes. Checked pairs:
+
+  | Pair | Contrast |
+  |---|---|
+  | White on `violet-600` (center action, active accents) | 7.0 : 1 |
+  | White on `gradient-primary`, lightest stop `#7C52F0` | 4.9 : 1 (AA for the pill label) |
+  | White on `violet-950`–`violet-800` (hero) | 17.8–12.9 : 1 |
+  | White 72% on `violet-800` (hero secondary text) | ≈ 7.5 : 1 |
+  | `ink-600` on `canvas` | 6.1 : 1 |
+  | `violet-700` icon on `violet-50` tile | 8.7 : 1 |
+  | `caution-600` on `surface` / on `caution-100` | 5.4 : 1 / 4.9 : 1 |
+  | `caution-300` on `violet-950` (overspent amount) | 10.9 : 1 |
+  | `ink-400` on `surface` | 2.9 : 1 — decorative and inactive only, never essential text |
+
+- Text never sits on an orb or on the glow.
+- Font scaling up to 200% without clipping amounts; amounts may wrap below their labels, and the floating card grows taller rather than truncating.
+- Touch targets ≥ 48 dp; the center action is 60 dp.
+- Focus is shown with a 2 dp `violet-500` ring, not by glow alone.
 - TalkBack labels read money naturally: "Available spending, 4 million 250 thousand rupiah".
-- Meaning is never conveyed by color alone (overspent state also uses the minus sign and text).
+- Meaning is never conveyed by color alone (overspent also uses the minus sign and text).
 
 ---
 
 ## 15. Android Behavior
 
+- Edge-to-edge: light status-bar icons over the hero, dark icons over the sheet; transparent navigation bar with the bottom bar above the gesture area.
 - Thumb-reach primary actions; numeric keypad with live thousands separators for amount fields.
-- System back always works and never discards a filled form without confirmation.
-- Edge-to-edge layout respecting system insets.
+- System back always works, closes bottom sheets first, and never discards a filled form without confirmation.
 - Do not impose arbitrary tap-count rules when a longer flow materially improves comprehension or safety (salary decisions, imports, reversals).
