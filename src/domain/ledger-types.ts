@@ -88,6 +88,13 @@ export interface Transaction {
   /** loan_start, credit_conversion: the total to repay on the new loan. */
   totalOwed?: Rupiah;
   debtCostType?: DebtCostType;
+  /** Descriptive fields: edited in place, never used by any rule (SYSTEM-OVERVIEW §6.7). */
+  note?: string;
+  /** income: who paid. */
+  source?: string;
+  /** A name snapshot (subscription, lender, holding) so history survives deletion. */
+  label?: string;
+  subscriptionId?: string;
 }
 
 export interface Movement {
