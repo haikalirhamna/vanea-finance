@@ -84,7 +84,7 @@ Every financial event. Immutable except for descriptive fields (SYSTEM-OVERVIEW 
 | id | TEXT PK | |
 | kind | TEXT | See §4 |
 | date | TEXT | Economic date, ≥ `profile.onboarded_on`, ≤ today |
-| amount | INTEGER | > 0 |
+| amount | INTEGER | > 0. Exceptions: `reversal` ≥ 0 (an income reversal when the Pool is empty), and `salary_payment` ≥ 0 when `advance_installment` > 0 (a fully withheld period) |
 | account | TEXT NULL | `opening_balance`: `pool`/`personal`/`savings`/`investment`. `surplus_allocation`: `savings`/`investment`. |
 | expense_category | TEXT NULL | `expense`: `needs`/`wants`/`growth`/`unexpected` (editable) |
 | business_cost_category | TEXT NULL | `business_cost`: `subscription`/`tools`/`tax`/`other` (editable) |
@@ -256,7 +256,7 @@ All salary-engine formulas: SYSTEM-OVERVIEW §5.
 |---|---|---|
 | 1 | Pool running balance ≥ 0 on every date | Domain validation before write |
 | 2 | Savings and investment balances ≥ 0 | Domain validation |
-| 3 | `transactions.amount > 0`; `movements.amount ≠ 0` | `CHECK` |
+| 3 | `transactions.amount > 0` (exceptions: reversal ≥ 0; salary_payment ≥ 0 with an installment); `movements.amount ≠ 0` | `CHECK` |
 | 4 | Kind-specific required columns present | Domain validation + `CHECK` where practical |
 | 5 | A transaction is reversed at most once; reversals are never reversed | `UNIQUE(reverses_id)` + domain |
 | 6 | Salary payments per period ≤ entitlement | Domain |

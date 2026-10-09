@@ -138,7 +138,7 @@ Based on 6 months of income. More history makes this more reliable.
 
 Choosing an amount above the recommendation shows a disclosure before confirming:
 
-> **At Rp 6.500.000, your Pool could run out.** If your weakest months repeat, your Pool would be empty in month 3. You can still choose this amount.
+> **At Rp 6.500.000, your Pool could run out.** If your weakest months repeat, your Pool would be empty in month 2. You can still choose this amount.
 
 ### 6.2 Salary review
 

@@ -37,7 +37,7 @@ Priorities, in order:
 | Backup | `expo-file-system`, `expo-sharing`, `expo-document-picker` | Export/import of an encrypted backup file. |
 | Randomness | `expo-crypto` | Database key and backup salt/nonce generation. |
 | Backup encryption | `@noble/ciphers` (XChaCha20-Poly1305) + `@noble/hashes` (scrypt) *(candidate)* | Pure JS; validate performance on a mid-range device in M5. |
-| Tests | Jest (`jest-expo`), `fast-check` for property tests | |
+| Tests | Jest with `ts-jest` for `src/domain` (plain Node, no Expo needed); `jest-expo` for UI tests from M1. `fast-check` for property tests | |
 | Lint | ESLint (Expo config) + `no-restricted-imports` for `src/domain` | Enforces the domain boundary. |
 | Builds | `npx expo run:android` / EAS Build | APK for personal use; AAB for Google Play. |
 
@@ -76,7 +76,10 @@ src/
     salary-pressure.ts        Pressure levels and safe salary (§5.6)
     spending.ts               Available Spending, daily allowance, pace (§7)
     reflection.ts             Highlights, set-aside, intention vs actual (§8)
-    __tests__/                One test file per module (e.g. salary-review.test.ts)
+    __tests__/                One test file per module (e.g. salary-review.test.ts), plus:
+                                parity.test.ts      TypeScript vs the Python reference (fixtures/parity.json)
+                                invariants.test.ts  property tests (fast-check)
+                                helpers/builders.ts transaction and series builders
   data/
     database.ts               Open encrypted DB, key handling, migrations runner
     schema.ts                 Table definitions and migrations
@@ -173,7 +176,7 @@ All thresholds live in `src/domain/config.ts`. Values below are the validated de
 | `ENGINE_WINDOW_MONTHS` | 12 | Months used for recommendation and affordability |
 | `MIN_RECOMMENDATION_MONTHS` | 3 | Minimum data for a recommendation |
 | `RECOMMEND_ROUNDING` | 50.000 | Recommendation rounded down |
-| `MAX_RAISE` | 0.05 | Maximum raise per adjustment |
+| `MAX_RAISE_PERCENT` | 5 | Maximum raise per adjustment (integer percent, computed with integer math) |
 | `RAISE_ROUNDING` | 10.000 | Raise amount rounded down |
 | `MIN_SHIFT` | 0.05 | Minimum required income shift |
 | `SWING_MULTIPLIER` | 1.5 | Shift must exceed 1.5 × usual swing |
@@ -185,6 +188,14 @@ All thresholds live in `src/domain/config.ts`. Values below are the validated de
 | `PRESSURE_ATTENTION_MONTHS` | 6 | Pressure level threshold |
 | `PRESSURE_SERIOUS_MONTHS` | 3 | Pressure level threshold |
 | `DEFAULT_BUFFER_MONTHS` | 3 | Safe surplus calculation (user-editable) |
+| `PAYDAY_MIN` / `PAYDAY_MAX` | 1 / 28 | Allowed payday days |
+| `ADVANCE_MIN_TERM` / `ADVANCE_MAX_TERM` | 1 / 6 | Salary advance term in periods |
+| `ADVANCE_REVERSAL_DEFAULT_TERM` | 3 | Term of an advance created by an income reversal |
+| `PACE_THRESHOLD` | 0.15 | Pace message appears when spending is this far ahead of time |
+| `HIGHLIGHT_LOOKBACK_MONTHS` | 3 | Months compared for reflection highlights |
+| `HIGHLIGHT_RELATIVE_CHANGE` | 0.20 | Minimum relative change to highlight |
+| `HIGHLIGHT_MIN_AMOUNT` | 200.000 | Minimum absolute change to highlight |
+| `HIGHLIGHT_MAX_ITEMS` | 2 | Highlights shown |
 
 ### 5.2 Monthly Net Income
 
@@ -199,6 +210,8 @@ net(m) = historical(m)
 - Reversed transactions and their reversals are excluded (they cancel out).
 - `historical(m)` comes from onboarding (SCHEMA §3.2). It exists only for months before onboarding and for the part of the onboarding month before the onboarding date.
 - Only **completed** months are used.
+- A reversed income or business cost is excluded together with its reversal, as if it never happened. A correction contributes through its replacement transaction.
+- Net income can be negative in a month of heavy costs; it is not clamped. (A yearly subscription paid in one month makes that month look weak — see PRD §14.)
 - The engine series runs from the earliest month with data to the last completed month. Months inside that span with no records count as **0**. A month with no income is real information for variable-income users.
 
 ### 5.3 Sustainable Salary & Recommendation ("worst-months test")
@@ -272,6 +285,8 @@ All gates pass → `ELIGIBLE`, with:
 max_raise      = floor(current salary × 0.05 / 10.000) × 10.000
 max_new_salary = current salary + max_raise
 ```
+
+Known limitation: the usual swing is a median-based measure, so it reads as 0 when most months are identical (for example 4, 7, 4, 7, 4). The threshold then falls back to 5%. Real income rarely repeats exactly; re-check with real data in the validation period.
 
 Why each gate exists:
 
@@ -455,6 +470,8 @@ Every financial event is one immutable `transaction` with one or more `movements
 - The user records payments manually. Vanea never moves real money.
 - **Partial payment:** if the Pool is smaller than the remaining entitlement, the maximum payment is the available Pool (error pattern in DESIGN §12).
 - **Top-up:** further payments in the same period are allowed until the entitlement is fully paid.
+- **Installment lock:** the advance installment is withheld on the period's **first** payment and recorded on it. Once any payment exists, the period's entitlement is fixed, even if the advance changes later. Top-ups withhold nothing.
+- **Fully withheld period:** if the whole salary is withheld (for example, a one-period advance equal to the salary), the user records a zero-amount payment that only settles the installment.
 - **No arrears:** unpaid entitlement does not carry into the next period. Low income lowers that period's pay instead of creating a debt to oneself.
 - Total payments in a period can never exceed the entitlement.
 
@@ -488,7 +505,11 @@ advance        → created automatically for `remainder`, origin = income_revers
                  no disbursement movement, default term 3 periods (user may change 1–6)
 ```
 
-Rationale: salary already paid was funded by money that turned out not to exist. The remainder is recovered from future salary instead of making the Pool negative. If an advance is already active, the remainder is added to its outstanding amount and its term is recalculated.
+Rationale: salary already paid was funded by money that turned out not to exist. The remainder is recovered from future salary instead of making the Pool negative.
+
+If the Pool is empty, `pool_part` is 0 and the reversal is recorded with amount 0 (so it still marks the income as reversed).
+
+If an advance is already active, the remainder is added to it. The installment stays the same, so the advance simply runs longer; only if that would exceed 6 remaining periods does the installment grow to `ceil(new outstanding / 6)`.
 
 ### 6.6 Surplus Allocation
 
@@ -541,7 +562,7 @@ period_start = most recent payday ≤ today
 base         = balance(personal) just before period_start + net salary paid in this period
 spent        = Σ expenses in [period_start, today]
 spent_pct    = spent / base
-elapsed_pct  = days elapsed in period / days in period
+elapsed_pct  = (days since period_start + 1) / days in period     (today counts as elapsed)
 show when base > 0 and spent_pct − elapsed_pct > 0.15
 ```
 
@@ -551,7 +572,7 @@ show when base > 0 and spent_pct − elapsed_pct > 0.15
 
 ## 8. Reflection Highlights
 
-For a completed month `m`, using only months on or after onboarding:
+For a completed month `m`. The 3 previous months must all be **full months after the onboarding month** (the onboarding month itself is partial):
 
 ```text
 for each category c in {needs, wants, growth, unexpected}:
@@ -563,7 +584,9 @@ for each category c in {needs, wants, growth, unexpected}:
 highlights = flagged categories sorted by |delta| descending, top 2
 ```
 
-Requires 3 previous observed months. Before that, there are no highlights.
+Requires 3 previous observed months (a month without spending still counts as observed). Before that, there are no highlights.
+
+**Received** (pre-filled in the reflection) is the sum of `salary_payment` amounts dated in the month.
 
 **Intention vs actual:**
 

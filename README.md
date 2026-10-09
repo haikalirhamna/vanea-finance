@@ -2,7 +2,7 @@
 
 A local-first Android app for people with variable income. Income goes into a **Pool**; you pay yourself a steady **salary** from it; Vanea shows what you can spend each day, warns calmly when your salary outpaces your income, and guides a monthly Kakeibo reflection.
 
-**Status:** specification — development has not started.
+**Status:** M0 done — the financial engine (`src/domain`) is implemented and tested. The app itself (Expo) starts in M1.
 
 ## Documents
 
@@ -23,6 +23,24 @@ python3 docs/simulation/salary_engine_simulation.py
 ```
 
 Results are summarized in [System Overview §5.8](docs/SYSTEM-OVERVIEW.md#58-simulation-results).
+
+## Develop
+
+```sh
+npm install
+npm test               # 200 unit, property and parity tests
+npm run test:coverage  # coverage for src/domain
+npm run typecheck
+npm run lint           # also enforces: src/domain imports nothing outside src/domain
+```
+
+`src/domain` is pure TypeScript (no React, Expo or SQLite). Code organization rules are in [System Overview §3.3](docs/SYSTEM-OVERVIEW.md).
+
+To regenerate the Python parity fixtures after changing a rule or constant:
+
+```sh
+python3 docs/simulation/salary_engine_simulation.py --export-fixtures src/domain/__tests__/fixtures/parity.json
+```
 
 ## Planned stack
 

@@ -328,7 +328,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 
 | Milestone | Content | Phase |
 |---|---|---|
-| **M0 — Engine** | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
+| **M0 — Engine** ✅ | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
 | **M1 — Core loop** | Onboarding, income, business costs, pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
 | **M2 — Salary decisions** | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
 | **M3 — Completeness** | Subscriptions and reminders, salary advance, savings, investments, surplus, intention, highlights, pace, notifications, app lock. | 1 |
@@ -357,9 +357,10 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 
 Resolved: income is IDR only (no USD income), and there is no tax reserve in v1.
 
-1. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
-2. **iOS.** When, if ever?
-3. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
+1. **Yearly subscriptions.** A yearly subscription paid in one month makes that month's net income look weak. Should yearly costs be spread across 12 months for the salary engine? v1 uses the month they are paid.
+2. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
+3. **iOS.** When, if ever?
+4. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
 
 ---
 

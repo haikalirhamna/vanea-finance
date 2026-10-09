@@ -4,13 +4,17 @@ Reference implementation of the salary-engine rules in SYSTEM-OVERVIEW.md §5,
 plus the original v1 rule it replaced, run against synthetic income histories.
 
 Run:  python3 docs/simulation/salary_engine_simulation.py
+Export parity fixtures for the TypeScript tests:
+      python3 docs/simulation/salary_engine_simulation.py --export-fixtures src/domain/__tests__/fixtures/parity.json
 
 All money is integer rupiah. The script prints Markdown tables; the results
 quoted in SYSTEM-OVERVIEW.md §5.8 come from this script with the default seed.
 """
 
+import json
 import math
 import random
+import sys
 from statistics import median
 
 # ---------------------------------------------------------------------------
@@ -239,5 +243,47 @@ def main(seed=11, n=2000):
     print("\nShortfall = share of histories where the Pool could not fund the full salary at least once.")
 
 
+# ---------------------------------------------------------------------------
+# Parity fixtures: the TypeScript domain must reproduce these exactly
+# ---------------------------------------------------------------------------
+def export_fixtures(path, seed=2026):
+    """Writes random cases with this reference implementation's answers."""
+    random.seed(seed)
+    kinds = [kind for kind, _ in SCENARIOS]
+    raise_cases, recommend_cases, lifecycle_cases = [], [], []
+
+    for _ in range(600):
+        series = generate(random.choice(kinds))
+        length = random.randint(1, len(series))
+        months = series[:length]
+        salary = random.randint(200, 800) * 10_000
+        pool = random.choice([0, random.randint(0, 3_000_000), random.randint(0, 40_000_000)])
+        since = random.randint(0, length + 1)
+        status, new_salary = evaluate_raise(months, salary, pool, since) if length else ("INSUFFICIENT_DATA", None)
+        raise_cases.append({"amounts": months, "salary": salary, "pool": pool, "monthsSinceChange": since,
+                            "status": status, "newSalary": new_salary})
+
+    for _ in range(300):
+        series = generate(random.choice(kinds))
+        months = series[:random.randint(1, len(series))]
+        pool = random.choice([0, random.randint(0, 3_000_000), random.randint(0, 40_000_000)])
+        recommend_cases.append({"amounts": months, "pool": pool, "recommended": recommend_salary(months, pool)})
+
+    for _ in range(120):
+        series = generate(random.choice(kinds))
+        for act in (False, True):
+            raises, shortfall, ratio = run(series, "vanea", act_on_warnings=act)
+            lifecycle_cases.append({"series": series, "actOnWarnings": act,
+                                    "raises": raises, "shortfallMonths": shortfall, "salaryRatio": ratio})
+
+    with open(path, "w") as handle:
+        json.dump({"raise": raise_cases, "recommend": recommend_cases, "lifecycle": lifecycle_cases}, handle)
+    print(f"Wrote {len(raise_cases)} raise, {len(recommend_cases)} recommendation, "
+          f"{len(lifecycle_cases)} lifecycle cases to {path}")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--export-fixtures":
+        export_fixtures(sys.argv[2])
+    else:
+        main()
