@@ -61,6 +61,16 @@ export function dateFor(month: Month, day: number): DateString {
   return `${month}-${pad(day)}`;
 }
 
+/** A day of a month, clamped to the month's last day (31 in February becomes 28 or 29). */
+export function dateInMonth(month: Month, day: number): DateString {
+  return dateFor(month, Math.min(day, daysInMonth(month)));
+}
+
+/** Adds months while keeping the anchor day, clamped to the month's length. */
+export function addMonthsToDate(date: DateString, count: number, anchorDay: number = dayOfMonth(date)): DateString {
+  return dateInMonth(addMonths(monthOf(date), count), anchorDay);
+}
+
 export function addDays(date: DateString, count: number): DateString {
   return new Date(toUtcMs(date) + count * MS_PER_DAY).toISOString().slice(0, 10);
 }

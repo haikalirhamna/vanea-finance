@@ -1,18 +1,17 @@
-/** Commitments, runway and safe surplus (SYSTEM-OVERVIEW §5.6, §6.6). */
-import { Rupiah } from './money';
+/** Commitments, own Pool, runway and safe surplus (SYSTEM-OVERVIEW §5.3, §5.6, §6.6). */
+import { Rupiah, sum } from './money';
 
-export interface RecurringCost {
-  amount: Rupiah;
-  cadence: 'monthly' | 'yearly';
-  active: boolean;
+/**
+ * Salary plus every recurring monthly cost: each subscription's monthly equivalent at today's
+ * price (subscriptions.monthlyEquivalents) and each business-loan installment per month.
+ */
+export function monthlyCommitment(salary: Rupiah, monthlyCosts: readonly Rupiah[]): Rupiah {
+  return salary + sum(monthlyCosts);
 }
 
-/** Salary plus active recurring costs per month (yearly costs divided by 12). */
-export function monthlyCommitment(salary: Rupiah, costs: readonly RecurringCost[]): Rupiah {
-  const active = costs.filter((cost) => cost.active);
-  const monthly = active.filter((cost) => cost.cadence === 'monthly').reduce((t, c) => t + c.amount, 0);
-  const yearly = active.filter((cost) => cost.cadence === 'yearly').reduce((t, c) => t + c.amount, 0);
-  return salary + monthly + Math.floor(yearly / 12);
+/** The Pool minus business-loan principal still owed: borrowed money never makes a salary look sustainable. */
+export function ownPool(pool: Rupiah, businessPrincipalOwed: Rupiah): Rupiah {
+  return Math.max(0, pool - businessPrincipalOwed);
 }
 
 /** How many months of commitments the Pool covers; null when there is no commitment. */

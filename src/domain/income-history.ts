@@ -1,7 +1,9 @@
 /** Monthly net income: the series the salary engine works on (SYSTEM-OVERVIEW §5.2). */
 import { DateString, Month, lastCompletedMonth, monthOf, monthRange } from './calendar';
-import { Rupiah } from './money';
+import { InstallmentLoan, businessLoanCostsByMonth } from './installment-loans';
 import { Transaction, activeTransactions } from './ledger';
+import { Rupiah } from './money';
+import { spreadCharge } from './subscriptions';
 
 export interface HistoricalMonth {
   month: Month;
@@ -18,13 +20,30 @@ function addToMonth(totals: Map<Month, number>, month: Month, amount: number): v
   totals.set(month, (totals.get(month) ?? 0) + amount);
 }
 
-function monthlyTotals(transactions: readonly Transaction[], historical: readonly HistoricalMonth[]): Map<Month, number> {
+/** A business cost belongs to the month paid, except a yearly subscription, which is spread over 12 months. */
+function addBusinessCost(totals: Map<Month, number>, tx: Transaction): void {
+  const paidMonth = monthOf(tx.date);
+  const isYearlySubscription = tx.businessCostCategory === 'subscription' && tx.billingCycle === 'yearly';
+  if (!isYearlySubscription) return addToMonth(totals, paidMonth, -tx.amount);
+  for (const share of spreadCharge(tx.amount, 'yearly', paidMonth)) addToMonth(totals, share.month, -share.amount);
+}
+
+/**
+ * Only income and business costs count. Loan money received, investment income and sale proceeds,
+ * opening balances and transfers between the user's own accounts never do.
+ */
+function monthlyTotals(
+  transactions: readonly Transaction[],
+  historical: readonly HistoricalMonth[],
+  businessLoans: readonly InstallmentLoan[],
+): Map<Month, number> {
   const totals = new Map<Month, number>();
   for (const entry of historical) addToMonth(totals, entry.month, entry.amount);
   for (const tx of activeTransactions(transactions)) {
     if (tx.kind === 'income') addToMonth(totals, monthOf(tx.date), tx.amount);
-    if (tx.kind === 'business_cost') addToMonth(totals, monthOf(tx.date), -tx.amount);
+    if (tx.kind === 'business_cost') addBusinessCost(totals, tx);
   }
+  for (const [month, cost] of businessLoanCostsByMonth(businessLoans, transactions)) addToMonth(totals, month, -cost);
   return totals;
 }
 
@@ -37,8 +56,9 @@ export function netIncomeSeries(
   transactions: readonly Transaction[],
   historical: readonly HistoricalMonth[],
   today: DateString,
+  businessLoans: readonly InstallmentLoan[] = [],
 ): MonthlyNetIncome[] {
-  const totals = monthlyTotals(transactions, historical);
+  const totals = monthlyTotals(transactions, historical, businessLoans);
   if (totals.size === 0) return [];
   const earliest = [...totals.keys()].sort()[0]!;
   return monthRange(earliest, lastCompletedMonth(today)).map((month) => ({

@@ -39,6 +39,16 @@ export const CONFIG = {
   // Spending insights
   PACE_THRESHOLD: 0.15,
 
+  // Subscriptions
+  YEARLY_SPREAD_MONTHS: 12,
+
+  // Debts
+  DEBT_RATIO_THRESHOLD: 0.3,
+
+  // Investments
+  INVESTMENT_STALE_DAYS: 90,
+  CONCENTRATION_SHARE: 0.5,
+
   // Reflection highlights
   HIGHLIGHT_LOOKBACK_MONTHS: 3,
   HIGHLIGHT_RELATIVE_CHANGE: 0.2,

@@ -13,6 +13,8 @@ import { Transaction, activeTransactions, allMovements, balanceBefore, balanceOf
 
 export interface DailyAllowance {
   nextPayday: DateString;
+  /** Debt payments due before the next payday, left out of the daily figure. */
+  dueBeforePayday: Rupiah;
   /** Days from today until the next payday (at least 1). */
   daysLeft: number;
   /** Null while overspent: there is nothing to spread. */
@@ -41,14 +43,18 @@ export function dailyAllowance(input: {
   today: DateString;
   paydayDay: number;
   entitlementUnpaid: boolean;
+  /** Personal debt payments due before the next payday (debts.dueBeforePayday). */
+  dueBeforePayday?: Rupiah;
 }): DailyAllowance {
+  const dueBeforePayday = input.dueBeforePayday ?? 0;
   const payday = nextPayday(input.today, input.paydayDay);
   const daysLeft = Math.max(1, daysBetween(input.today, payday));
   const overspent = input.available <= 0;
   return {
     nextPayday: payday,
+    dueBeforePayday,
     daysLeft,
-    amount: overspent ? null : Math.floor(input.available / daysLeft),
+    amount: overspent ? null : Math.floor(Math.max(0, input.available - dueBeforePayday) / daysLeft),
     overspent,
     salaryDueToday: dayOfMonth(input.today) === input.paydayDay && input.entitlementUnpaid,
   };

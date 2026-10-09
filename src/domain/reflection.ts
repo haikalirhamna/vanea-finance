@@ -3,6 +3,7 @@ import { DateString, Month, addMonths, monthOf } from './calendar';
 import { CONFIG } from './config';
 import { Rupiah, sum } from './money';
 import { EXPENSE_CATEGORIES, ExpenseCategory, Transaction, activeTransactions } from './ledger';
+import { InstallmentLoan, interestByMonth } from './installment-loans';
 import { mean } from './statistics';
 
 export type CategoryTotals = Record<ExpenseCategory, Rupiah>;
@@ -57,14 +58,21 @@ const SET_ASIDE_SIGN: Partial<Record<Transaction['kind'], 1 | -1>> = {
   savings_deposit: 1,
   investment_contribution: 1,
   savings_withdrawal: -1,
-  investment_withdrawal: -1,
 };
 
-/** Net money moved from personal spending into savings and investments (Pool surplus excluded). */
+/** Cash that came back to Available Spending from an investment (a sale or a cash withdrawal). */
+const RETURNS_TO_PERSONAL: readonly Transaction['kind'][] = ['investment_sale', 'investment_cash_withdrawal'];
+
+function setAsideEffect(tx: Transaction): number {
+  if (RETURNS_TO_PERSONAL.includes(tx.kind)) return tx.destinationAccount === 'personal' ? -tx.amount : 0;
+  return (SET_ASIDE_SIGN[tx.kind] ?? 0) * tx.amount;
+}
+
+/** Net money moved from Available Spending into savings and investments (Pool surplus excluded). */
 export function setAsideIn(transactions: readonly Transaction[], month: Month): Rupiah {
   return activeTransactions(transactions)
     .filter((tx) => inMonth(tx, month))
-    .reduce((total, tx) => total + (SET_ASIDE_SIGN[tx.kind] ?? 0) * tx.amount, 0);
+    .reduce((total, tx) => total + setAsideEffect(tx), 0);
 }
 
 export function salaryReceivedIn(transactions: readonly Transaction[], month: Month): Rupiah {
@@ -139,5 +147,43 @@ export function compareIntention(intention: MonthlyIntention, summary: MonthSumm
     wantsSpent,
     wantsLimit: intention.wantsLimit,
     wantsOverLimit: intention.wantsLimit !== null && wantsSpent > intention.wantsLimit,
+  };
+}
+
+export interface DebtInvestmentLines {
+  /** Payments from Available Spending toward credit lines and loans. */
+  debtPayments: Rupiah;
+  /** Interest, fees and late fees on personal debts, kept apart from Kakeibo spending. */
+  costOfBorrowing: Rupiah;
+  investmentIncome: Rupiah;
+  /** Proceeds of sales minus the cost of what was sold; negative is a loss. */
+  realizedGains: number;
+}
+
+function personalDebtCosts(transactions: readonly Transaction[], month: Month, loans: readonly InstallmentLoan[]): Rupiah {
+  const personalLoanIds = new Set(loans.filter((loan) => loan.purpose === 'personal').map((loan) => loan.id));
+  const isPersonal = (tx: Transaction) => tx.paymentMethod === 'credit_line' || personalLoanIds.has(tx.debtId ?? '');
+  const fees = activeTransactions(transactions)
+    .filter((tx) => tx.kind === 'debt_cost' && inMonth(tx, month) && isPersonal(tx))
+    .reduce((total, tx) => total + tx.amount, 0);
+  const interest = loans
+    .filter((loan) => loan.purpose === 'personal')
+    .reduce((total, loan) => total + (interestByMonth(loan, transactions).get(month) ?? 0), 0);
+  return fees + interest;
+}
+
+/** The debt and investment lines the reflection shows apart from Kakeibo spending (PRD REF-7). */
+export function debtAndInvestmentLines(
+  transactions: readonly Transaction[],
+  month: Month,
+  loans: readonly InstallmentLoan[],
+): DebtInvestmentLines {
+  const active = activeTransactions(transactions).filter((tx) => inMonth(tx, month));
+  const sumOf = (pick: (tx: Transaction) => number) => active.reduce((total, tx) => total + pick(tx), 0);
+  return {
+    debtPayments: sumOf((tx) => ((tx.kind === 'debt_payment' || tx.kind === 'debt_payoff') && tx.sourceAccount === 'personal' ? tx.amount : 0)),
+    costOfBorrowing: personalDebtCosts(transactions, month, loans),
+    investmentIncome: sumOf((tx) => (tx.kind === 'investment_income' ? tx.amount : 0)),
+    realizedGains: sumOf((tx) => (tx.kind === 'investment_sale' ? tx.amount - (tx.costRemoved ?? 0) : 0)),
   };
 }

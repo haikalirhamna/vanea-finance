@@ -1,5 +1,6 @@
+import { InstallmentLoan, totalToRepay } from '../installment-loans';
 import {
-  compareIntention, expenseTotals, findHighlights, salaryReceivedIn, setAsideIn, summarizeMonth,
+  compareIntention, debtAndInvestmentLines, expenseTotals, findHighlights, salaryReceivedIn, setAsideIn, summarizeMonth,
 } from '../reflection';
 import { expense, salaryPayment, tx } from './helpers/builders';
 
@@ -44,6 +45,16 @@ describe('monthly totals', () => {
       tx('savings_deposit', 999, { date: '2026-10-01' }),
     ];
     expect(setAsideIn(moves, '2026-09')).toBe(900_000);
+  });
+
+  it('takes money back out of what was set aside when an investment pays out to Available Spending', () => {
+    const moves = [
+      tx('investment_contribution', 1_000_000, { holdingId: 'h1', date: '2026-09-02' }),
+      tx('investment_sale', 600_000, { holdingId: 'h1', costRemoved: 500_000, destinationAccount: 'personal', date: '2026-09-10' }),
+      tx('investment_cash_withdrawal', 50_000, { holdingId: 'h1', destinationAccount: 'personal', date: '2026-09-11' }),
+      tx('investment_sale', 900_000, { holdingId: 'h2', costRemoved: 800_000, destinationAccount: 'savings', date: '2026-09-12' }),
+    ];
+    expect(setAsideIn(moves, '2026-09')).toBe(1_000_000 - 600_000 - 50_000);
   });
 
   it('summarizes the month for the reflection screen', () => {
@@ -110,5 +121,48 @@ describe('compareIntention', () => {
   it('has no shortfall when the intention was met, and no limit means never over', () => {
     const result = compareIntention({ setAsideAmount: 500_000, wantsLimit: null }, summary);
     expect(result).toMatchObject({ setAsideShortfall: 0, wantsOverLimit: false, wantsLimit: null });
+  });
+});
+
+describe('debtAndInvestmentLines', () => {
+  const kredivo: InstallmentLoan = {
+    id: 'kredivo', purpose: 'personal', received: 3_000_000, installmentAmount: 550_000, installmentCount: 6,
+    frequency: 'monthly', startDate: '2026-08-02', firstDueDate: '2026-09-02',
+  };
+  const biz: InstallmentLoan = { ...kredivo, id: 'biz', purpose: 'business' };
+  const loanPay = (id: string, source: 'personal' | 'pool') =>
+    tx('debt_payment', 550_000, { debtId: id, paymentMethod: 'installment', sourceAccount: source, date: '2026-09-02' });
+  const book = [
+    tx('loan_start', 3_000_000, { debtId: 'kredivo', paymentMethod: 'installment', totalOwed: totalToRepay(kredivo), destinationAccount: 'personal', date: '2026-08-02' }),
+    loanPay('kredivo', 'personal'),
+    loanPay('biz', 'pool'),
+    tx('debt_payment', 1_200_000, { debtId: 'paylater', paymentMethod: 'credit_line', sourceAccount: 'personal', reservePart: 1_200_000, date: '2026-09-25' }),
+    tx('debt_cost', 45_000, { debtId: 'paylater', paymentMethod: 'credit_line', debtCostType: 'fee', date: '2026-09-26' }),
+    tx('debt_cost', 20_000, { debtId: 'kredivo', paymentMethod: 'installment', debtCostType: 'late_fee', date: '2026-09-27' }),
+    tx('debt_cost', 99_000, { debtId: 'biz', paymentMethod: 'installment', debtCostType: 'late_fee', date: '2026-09-27' }),
+    tx('investment_income', 80_000, { holdingId: 'h1', date: '2026-09-15' }),
+    tx('investment_sale', 4_600_000, { holdingId: 'h1', costRemoved: 4_000_000, destinationAccount: 'personal', date: '2026-09-20' }),
+    tx('investment_sale', 1_000_000, { holdingId: 'h2', costRemoved: 1_300_000, destinationAccount: 'savings', date: '2026-09-21' }),
+  ];
+
+  it('totals personal debt payments, apart from Kakeibo spending', () => {
+    expect(debtAndInvestmentLines(book, '2026-09', [kredivo, biz]).debtPayments).toBe(550_000 + 1_200_000);
+  });
+
+  it('counts personal interest, fees and late fees as the cost of borrowing — not business ones', () => {
+    // 50.000 interest in the installment + 45.000 card fee + 20.000 personal late fee.
+    expect(debtAndInvestmentLines(book, '2026-09', [kredivo, biz]).costOfBorrowing).toBe(50_000 + 45_000 + 20_000);
+  });
+
+  it('adds investment income and realized gains or losses', () => {
+    const lines = debtAndInvestmentLines(book, '2026-09', [kredivo, biz]);
+    expect(lines.investmentIncome).toBe(80_000);
+    expect(lines.realizedGains).toBe(600_000 - 300_000);
+  });
+
+  it('is zero in a month without any of it', () => {
+    expect(debtAndInvestmentLines(book, '2026-07', [kredivo, biz])).toEqual({
+      debtPayments: 0, costOfBorrowing: 0, investmentIncome: 0, realizedGains: 0,
+    });
   });
 });

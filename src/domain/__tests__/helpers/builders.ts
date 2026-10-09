@@ -16,7 +16,10 @@ export const opening = (account: Account, amount: number, date: DateString = '20
 export const income = (amount: number, date: DateString = '2026-01-15') => tx('income', amount, { date });
 
 export const businessCost = (amount: number, date: DateString = '2026-01-15') =>
-  tx('business_cost', amount, { date, businessCostCategory: 'subscription' });
+  tx('business_cost', amount, { date, businessCostCategory: 'tools' });
+
+export const subscriptionCost = (amount: number, date: DateString, billingCycle: 'monthly' | 'yearly') =>
+  tx('business_cost', amount, { date, businessCostCategory: 'subscription', billingCycle });
 
 export const expense = (amount: number, date: DateString, category: ExpenseCategory = 'needs') =>
   tx('expense', amount, { date, expenseCategory: category });

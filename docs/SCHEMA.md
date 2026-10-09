@@ -87,7 +87,7 @@ Every financial event. Immutable except for descriptive fields (SYSTEM-OVERVIEW 
 | id | TEXT PK | |
 | kind | TEXT | See §4 |
 | date | TEXT | Economic date, ≥ `profile.onboarded_on`, ≤ today |
-| amount | INTEGER | > 0. Exceptions: `reversal` ≥ 0 (an income reversal when the Pool is empty), and `salary_payment` ≥ 0 when `advance_installment` > 0 (a fully withheld period) |
+| amount | INTEGER | > 0. Exceptions: `reversal` ≥ 0 (an income reversal when the Pool is empty), `salary_payment` ≥ 0 when `advance_installment` > 0 (a fully withheld period), and `investment_sale` ≥ 0 when `cost_removed` > 0 (a sale at a total loss) |
 | account | TEXT NULL | `opening_balance`: `pool`/`personal`/`savings`/`investment`/`debt`. `surplus_allocation`: `savings`/`investment`. |
 | expense_category | TEXT NULL | `expense`: `needs`/`wants`/`growth`/`unexpected` (editable) |
 | business_cost_category | TEXT NULL | `business_cost`: `subscription`/`tools`/`tax`/`other` (editable) |
@@ -100,7 +100,7 @@ Every financial event. Immutable except for descriptive fields (SYSTEM-OVERVIEW 
 | subscription_id | TEXT NULL FK → subscriptions `ON DELETE SET NULL` | `business_cost` of a subscription (M0.1) |
 | label | TEXT NULL | Name snapshot (subscription, lender, holding) so history survives deletion (M0.1) |
 | billing_cycle | TEXT NULL | `monthly` / `yearly`. **Required** when `business_cost_category = 'subscription'` (M0.1) |
-| payment_method | TEXT NULL | `expense`: `available` (default) / `credit_line` / `installment` (M0.1) |
+| payment_method | TEXT NULL | `expense`: `available` (default) / `credit_line` / `installment`. `debt_cost`, `debt_payment`, `debt_payoff`: the kind of debt touched, `credit_line` or `installment` (M0.1) |
 | debt_id | TEXT NULL FK → debts | Credit-line expenses, `debt_cost`, `debt_payment`, `debt_payoff`, `loan_start`, `credit_conversion` (source line), `bill_reserve_set_aside`, `opening_balance` on a debt (M0.1) |
 | target_debt_id | TEXT NULL FK → debts | `credit_conversion`: the new installment loan (M0.1) |
 | holding_id | TEXT NULL FK → holdings | `investment_*`, `surplus_allocation` to an investment, `opening_balance` on a holding (M0.1) |
@@ -110,6 +110,7 @@ Every financial event. Immutable except for descriptive fields (SYSTEM-OVERVIEW 
 | cost_removed | INTEGER NULL | `investment_sale`: put in removed (M0.1) |
 | cleared_amount | INTEGER NULL | `debt_payoff`: owed amount cleared (M0.1) |
 | debt_cost_type | TEXT NULL | `debt_cost`: `interest` / `fee` / `late_fee` (M0.1) |
+| total_owed | INTEGER NULL | `loan_start`: installment × count; `credit_conversion`: the new loan's total (M0.1) |
 | reverses_id | TEXT NULL UNIQUE FK → transactions | `reversal` only. `UNIQUE`: a transaction is reversed at most once. |
 | replaced_by_id | TEXT NULL FK → transactions | Set on a reversed original when an "Edit" created a replacement |
 | created_at, updated_at | TEXT | |
@@ -297,11 +298,11 @@ Movements per kind: SYSTEM-OVERVIEW §6.2. Required columns:
 | `business_cost` | `business_cost_category`; `billing_cycle` when the category is `subscription` |
 | `salary_payment` | `salary_period`, `advance_installment` |
 | `expense` | `expense_category`; `payment_method`; `debt_id` unless paid from Available Spending |
-| `debt_cost` | `debt_id`, `debt_cost_type` (M0.1) |
-| `debt_payment` | `debt_id`, `source_account`; `reserve_part` for credit lines (M0.1) |
-| `debt_payoff` | `debt_id`, `source_account`, `cleared_amount` (M0.1) |
-| `loan_start` | `debt_id` (M0.1) |
-| `credit_conversion` | `debt_id`, `target_debt_id`, `reserve_part` (M0.1) |
+| `debt_cost` | `debt_id`, `debt_cost_type`, `payment_method` (M0.1) |
+| `debt_payment` | `debt_id`, `payment_method`, `source_account`; `reserve_part` for credit lines (0 for loans) (M0.1) |
+| `debt_payoff` | `debt_id`, `payment_method`, `source_account`, `cleared_amount` (M0.1) |
+| `loan_start` | `debt_id`, `total_owed` (≥ amount); `destination_account` `personal` or `pool`, none for an installment purchase (M0.1) |
+| `credit_conversion` | `debt_id`, `target_debt_id` (a different debt), `reserve_part` ≤ amount, `total_owed` (M0.1) |
 | `savings_deposit`, `savings_withdrawal` | — |
 | `investment_contribution` | `holding_id` |
 | `investment_sale` | `holding_id`, `cost_removed`, `destination_account` (M0.1) |
@@ -350,7 +351,7 @@ All salary-engine formulas: SYSTEM-OVERVIEW §5. Subscriptions, debts and invest
 |---|---|---|
 | 1 | Pool running balance ≥ 0 on every date | Domain validation before write |
 | 2 | Savings, every holding's put in and cash, every bill reserve and every debt's owed amount ≥ 0 on every date | Domain validation |
-| 3 | `transactions.amount > 0` (exceptions: reversal ≥ 0; salary_payment ≥ 0 with an installment); `movements.amount ≠ 0` | `CHECK` |
+| 3 | `transactions.amount > 0` (exceptions: reversal ≥ 0; salary_payment ≥ 0 with an installment; investment_sale ≥ 0 with a cost removed); `movements.amount ≠ 0` | `CHECK` |
 | 4 | Kind-specific required columns present | Domain validation + `CHECK` where practical |
 | 5 | A transaction is reversed at most once; reversals are never reversed | `UNIQUE(reverses_id)` + domain |
 | 6 | Salary payments per period ≤ entitlement | Domain |

@@ -1,25 +1,23 @@
-import { monthlyCommitment, runwayMonths, safeSurplus } from '../pool';
+import { monthlyCommitment, ownPool, runwayMonths, safeSurplus } from '../pool';
 
 describe('monthlyCommitment', () => {
-  it('adds active monthly costs and yearly costs divided by 12', () => {
-    const costs = [
-      { amount: 225_000, cadence: 'monthly' as const, active: true },
-      { amount: 1_200_000, cadence: 'yearly' as const, active: true },
-      { amount: 999_000, cadence: 'monthly' as const, active: false },
-    ];
-    expect(monthlyCommitment(8_000_000, costs)).toBe(8_000_000 + 225_000 + 100_000);
+  it('adds every recurring monthly cost to the salary', () => {
+    expect(monthlyCommitment(8_000_000, [225_000, 100_000])).toBe(8_325_000);
   });
 
   it('is just the salary without costs', () => {
     expect(monthlyCommitment(5_000_000, [])).toBe(5_000_000);
   });
+});
 
-  it('rounds the yearly share down once', () => {
-    const costs = [
-      { amount: 100, cadence: 'yearly' as const, active: true },
-      { amount: 100, cadence: 'yearly' as const, active: true },
-    ];
-    expect(monthlyCommitment(0, costs)).toBe(16);
+describe('ownPool', () => {
+  it('leaves out the principal of business loans that is still owed', () => {
+    expect(ownPool(14_000_000, 3_000_000)).toBe(11_000_000);
+  });
+
+  it('is never negative and never above the Pool', () => {
+    expect(ownPool(2_000_000, 3_000_000)).toBe(0);
+    expect(ownPool(2_000_000, 0)).toBe(2_000_000);
   });
 });
 

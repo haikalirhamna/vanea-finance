@@ -19,7 +19,7 @@ describe('dailyAllowance', () => {
 
   it('spreads Available Spending over the days until payday', () => {
     expect(dailyAllowance({ ...base, available: 4_250_000 })).toEqual({
-      nextPayday: '2026-10-25', daysLeft: 16, amount: 265_625, overspent: false, salaryDueToday: false,
+      nextPayday: '2026-10-25', dueBeforePayday: 0, daysLeft: 16, amount: 265_625, overspent: false, salaryDueToday: false,
     });
   });
 
@@ -37,6 +37,23 @@ describe('dailyAllowance', () => {
     const onPayday = dailyAllowance({ ...base, today: '2026-10-25', available: 3_000_000, entitlementUnpaid: true });
     expect(onPayday).toMatchObject({ nextPayday: '2026-11-25', daysLeft: 31, salaryDueToday: true });
     expect(dailyAllowance({ ...base, today: '2026-10-24', available: 100 }).daysLeft).toBe(1);
+  });
+
+  it('leaves debt payments due before payday out of the daily figure', () => {
+    const result = dailyAllowance({ ...base, available: 4_250_000, dueBeforePayday: 650_000 });
+    expect(result.dueBeforePayday).toBe(650_000);
+    expect(result.amount).toBe(Math.floor(3_600_000 / 16));
+    expect(result.overspent).toBe(false);
+  });
+
+  it('shows 0 a day, not a negative, when debts due take everything', () => {
+    const result = dailyAllowance({ ...base, available: 500_000, dueBeforePayday: 650_000 });
+    expect(result.amount).toBe(0);
+    expect(result.overspent).toBe(false);
+  });
+
+  it('has no figure at all while overspent, whatever is due', () => {
+    expect(dailyAllowance({ ...base, available: -1, dueBeforePayday: 650_000 })).toMatchObject({ amount: null, overspent: true });
   });
 
   it('flags salary due only on payday and only when unpaid', () => {

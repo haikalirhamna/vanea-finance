@@ -4,7 +4,7 @@
 **Status:** Draft for review
 **Last updated:** 2026-10-09
 
-> **Implementation status.** `src/domain` implements the rules of v2.1 (milestone M0). Rules marked **(M0.1)** — subscriptions and cost spreading, credit lines, installment loans, investments by holding, the own Pool and the debt-aware insights — are specified here but not implemented yet (PRD §12).
+> **Implementation status.** `src/domain` implements everything in this document: milestone M0 (the salary engine and ledger) and M0.1 (subscriptions and cost spreading, credit lines, installment loans, investments by holding, the own Pool and the debt-aware insights). **(M0.1)** marks rules added in v2.2. The Python simulation still models the salary engine (§5); the new rules are covered by unit and property tests.
 
 This document is the single source of truth for Vanea's architecture and for every financial algorithm. The PRD describes *what* the product does and *why*; this document defines *exactly how* the numbers are calculated. When the two disagree, fix the disagreement — do not pick one silently.
 
@@ -70,7 +70,10 @@ src/
     money.ts                  Integer rupiah arithmetic and rounding
     calendar.ts               Dates, months, salary periods, payday math
     statistics.ts             Median, mean, usual swing
-    ledger.ts                 Accounts, transaction kinds, movements, balances, Pool invariant, reversals (§6.1, §6.2, §6.7)
+    ledger-types.ts           Accounts, transaction kinds and their fields, movements, error codes (§6.1, §6.2)
+    ledger-movements.ts       The movements each kind of transaction causes, reversals included (§6.2)
+    ledger.ts                 Balances, the never-negative invariant, daily balances, reversals (§6.2, §6.7); re-exports the two above
+    ledger-validation.ts      Whether a batch of transactions may be recorded (§6.2, §6.7)
     income-history.ts         Monthly net income series (§5.2)
     pool.ts                   Monthly commitment, runway, safe surplus (§5.6, §6.6)
     salary-recommendation.ts  Sustainable salary, recommendation, explanation, depletion month (§5.3)
@@ -247,7 +250,7 @@ recommended = floor(sustainable / 50.000) × 50.000
 ```
 
 - Requires at least 3 months of data. With fewer, there is no recommendation (§5.5.1).
-- `Pool_now` is the **own Pool** (M0.1): `max(0, Pool − business-loan principal still owed)` (§6.10). Borrowed money never makes a salary look sustainable. Until M0.1 the code uses the Pool balance, which is identical when there are no business loans.
+- `Pool_now` is the **own Pool** (M0.1): `max(0, Pool − business-loan principal still owed)` (§6.10). Borrowed money never makes a salary look sustainable.
 - The 5% safety margin keeps the Pool slowly growing. In simulation, a salary equal to 100% of mean income left 5% of stable-income users unable to pay their full salary at least once in two years. With 95% it dropped to 0%.
 
 **Explanation shown to the user** uses the `k` that produced the minimum:
@@ -455,7 +458,7 @@ Re-run the simulation whenever a constant in §5.1 changes, and after three mont
 | `bill_reserve:<line>` | Money already taken out of Available Spending for a credit line's bill (M0.1) | Never |
 | `debt:<debt>` | What is owed on one credit line or loan; a liability, positive = owed (M0.1) | Never |
 
-Scoped accounts carry the id of their holding, line or debt (`ref_id` in SCHEMA §3.4). Until M0.1 the code has a single `investment` account.
+Scoped accounts carry the id of their holding, line or debt (`ref_id` in SCHEMA §3.4).
 
 ```text
 balance(account[, ref]) = Σ movements(account[, ref])
@@ -466,6 +469,8 @@ All balances are derived from movements. Cached balances, if any, must be reprod
 ### 6.2 Transaction Kinds
 
 Every financial event is one immutable `transaction` with one or more `movements`. `amount` is positive (exceptions in SCHEMA §3.3).
+
+For `debt_cost`, `debt_payment` and `debt_payoff`, `payment_method` says which kind of debt the transaction touches (`credit_line` or `installment`), because a credit line has a bill reserve and a loan does not. A loan's `loan_start` carries `total_owed` (installment × count); a conversion carries the new loan's `total_owed`.
 
 | Kind | Movements | Notes |
 |---|---|---|
@@ -486,7 +491,7 @@ Every financial event is one immutable `transaction` with one or more `movements
 | `savings_deposit` | personal `−a`, savings `+a` | |
 | `savings_withdrawal` | savings `−a`, personal `+a` | |
 | `investment_contribution` | personal `−a`, investment:h `+a` | |
-| `investment_sale` | investment:h `−cost_removed`, destination `+proceeds` | Destination personal or savings, chosen by the user (M0.1; replaces `investment_withdrawal`) |
+| `investment_sale` | investment:h `−cost_removed`, destination `+proceeds` | Destination personal or savings, chosen by the user (M0.1; replaces `investment_withdrawal`). Proceeds may be 0 for a sale at a total loss, if `cost_removed` > 0 |
 | `investment_income` | investment_cash:h `+a` | Dividends, coupons, deposit interest (M0.1) |
 | `investment_cash_withdrawal` | investment_cash:h `−a`, destination `+a` | Destination personal or savings (M0.1) |
 | `surplus_allocation` | pool `−a`, savings or investment:h `+a` | §6.6 |
@@ -619,7 +624,7 @@ Credit cards and pay-next-month PayLater. Fields: name, type, optional limit, st
 with `r = min(a, bill_reserve:l)`, stored on the transaction as `reserve_part` so the movements are reproducible. Paying more than is owed is rejected.
 
 ```text
-amount_due(l) = max(0, owed at the latest statement date − payments since that date)
+amount_due(l) = max(0, owed at the latest statement date − payments and conversions since that date)
 due_date(l)   = the first due day after the latest statement date
 older_debt(l) = max(0, owed − bill_reserve)        (balance not yet set aside)
 ```
@@ -666,7 +671,7 @@ business_principal_owed = Σ principal_owed(d) over open business loans
 own_pool                = max(0, Pool − business_principal_owed)
 ```
 
-The interest part of each business-loan payment counts as a business cost in `net(m)` (§5.2). A loan closes when owed reaches 0. Nothing changes automatically when an installment is missed.
+The interest part of each business-loan payment counts as a business cost in `net(m)` (§5.2), and so does a late fee, in the month it is recorded. A part-paid installment counts its interest pro rata; an early payoff counts what it pays beyond the principal still owed as interest. A loan closes when owed reaches 0. Nothing changes automatically when an installment is missed.
 
 ### 6.11 Investments (M0.1)
 
@@ -712,14 +717,15 @@ It rolls over between periods. It is not reset monthly: unspent salary stays the
 ```text
 next_payday   = next date with day = payday_day strictly after today
 days_left     = days from today until next_payday (minimum 1)
-due_before    = Σ unpaid installments of personal loans due in [today, next_payday)      (M0.1)
-              + Σ older_debt(l) of credit lines whose due date is in that window       (§6.9)
+due_before    = Σ unpaid installments of personal loans due before next_payday (overdue ones included)   (M0.1)
+              + Σ older_debt(l) of credit lines whose unpaid bill is due before next_payday               (§6.9)
 daily         = floor(max(Available Spending − due_before, 0) / days_left)
 ```
 
 States:
 
 - Available Spending ≤ 0 → overspent state (DESIGN §4.2), no daily figure.
+- A due date on payday itself is not "before payday".
 - `due_before` > 0 → the line names it: "after Rp 650.000 in installments due before then".
 - Today is payday and the current period's entitlement is unpaid → "Salary due today" state.
 
@@ -741,12 +747,12 @@ show when base > 0 and spent_pct − elapsed_pct > 0.15
 ```text
 total_owed           = Σ balance(debt:d) over open debts (salary advance listed separately)
 due_this_month       = Σ installments of personal loans due in the calendar month
-                     + Σ amount_due(l) of credit lines due in the month
+                     + Σ statement balance of credit lines whose bill is due in the month
 debt_payment_ratio   = due_this_month / salary
 show the calm card when debt_payment_ratio > DEBT_RATIO_THRESHOLD (0.30)
 ```
 
-Business loans are paid from the Pool and are not part of the ratio; they appear in `monthly_commitment` (§5.6). The ratio never blocks a record and never ranks which debt to pay.
+A credit line counts at its statement balance, not at what is still unpaid, so the ratio does not shrink as bills are paid. A loan counts while money is owed on it or when it was paid in the month. Business loans are paid from the Pool and are not part of the ratio; they appear in `monthly_commitment` (§5.6). The ratio never blocks a record and never ranks which debt to pay.
 
 ---
 
