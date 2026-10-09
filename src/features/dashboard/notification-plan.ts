@@ -1,0 +1,65 @@
+/**
+ * The local reminders Vanea schedules (SYSTEM-OVERVIEW §9): what to say and when. Pure: lib/notifications.ts
+ * hands the plan to the phone. Raise eligibility is never a notification.
+ */
+import { DateString, addMonths, monthOf, nextPayday, paydayOf } from '@/domain/calendar';
+import { dueList } from '@/domain/debts';
+import { salaryFor } from '@/domain/salary-change';
+import { Snapshot } from '@/data/snapshot';
+import { formatMoney } from '@/lib/format';
+import { billReserveOf } from '@/domain/credit-lines';
+import { debtBookOf } from './dashboard-summary';
+
+export interface PlannedNotification {
+  id: string;
+  /** Local date and time, `YYYY-MM-DDTHH:MM`. */
+  at: string;
+  title: string;
+  body: string;
+}
+
+const REMINDER_TIME = '09:00';
+const PAYDAYS_AHEAD = 2;
+
+function atNine(date: DateString): string {
+  return `${date}T${REMINDER_TIME}`;
+}
+
+function paydayReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  const { profile, salarySettings } = snapshot;
+  if (!profile?.notify.payday) return [];
+  const reminders: PlannedNotification[] = [];
+  let date = nextPayday(today, profile.paydayDay);
+  for (let count = 0; count < PAYDAYS_AHEAD; count++) {
+    const salary = salaryFor(salarySettings, monthOf(date));
+    if (salary !== null) {
+      reminders.push({
+        id: `payday:${date}`, at: atNine(date), title: 'Payday',
+        body: `Payday. Pay yourself ${formatMoney(salary)} when you're ready.`,
+      });
+    }
+    date = paydayOf(addMonths(monthOf(date), 1), profile.paydayDay);
+  }
+  return reminders;
+}
+
+function debtReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  if (!snapshot.profile?.notify.debts) return [];
+  const book = debtBookOf(snapshot);
+  const names = new Map(snapshot.debts.map((d) => [d.id, d.name]));
+  return dueList(book, today)
+    .filter((due) => due.date >= today)
+    .map((due) => {
+      const name = names.get(due.debtId) ?? 'A debt';
+      const reserved = due.kind === 'credit_line' ? Math.min(due.amount, billReserveOf(snapshot.transactions, due.debtId)) : 0;
+      const body = due.kind === 'credit_line'
+        ? `Your ${name} bill is due today: ${formatMoney(due.amount)}.${reserved > 0 ? ` ${formatMoney(reserved)} is already set aside.` : ''}`
+        : `Your ${name} installment of ${formatMoney(due.amount)} is due today.`;
+      return { id: `debt:${due.debtId}:${due.date}`, at: atNine(due.date), title: due.kind === 'credit_line' ? 'Bill due' : 'Installment due', body };
+    });
+}
+
+/** Upcoming reminders, soonest first. Anything already in the past is left out. */
+export function planNotifications(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
+}

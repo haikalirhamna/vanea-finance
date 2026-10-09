@@ -2,3 +2,7 @@ node_modules/
 coverage/
 __pycache__/
 *.pyc
+.expo/
+dist/
+*.log
+web-build/
