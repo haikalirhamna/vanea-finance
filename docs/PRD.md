@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -143,7 +143,9 @@ All balances are derived from immutable transactions (SYSTEM-OVERVIEW §6).
 | **Daily allowance** | Available Spending divided by days until next payday |
 | **Runway** | How many months your Pool covers your salary and subscriptions |
 | **Business cost** | Money your work needs: app subscriptions, tools, tax, other |
-| **Subscription** | A recurring business cost (monthly or yearly) |
+| **Subscription** | A recurring business cost billed **monthly** or **yearly**. Its price can change over time. |
+| **Monthly share** | A yearly charge divided evenly over the 12 months it covers, so one big payment does not make a single month look weak |
+| **Price change** | A new price for a subscription, effective from a billing date. Past charges never change. |
 | **Typical income** | The middle value of your recent monthly income, after business costs |
 | **Usual swing** | How much your income normally moves month to month |
 | **Salary review** | Vanea's monthly check of whether a raise is justified |
@@ -168,7 +170,7 @@ Priority: **P0** = first personal build · **P1** = before public release · **P
 | ONB-2 | Choose payday (day 1–28). | P0 |
 | ONB-3 | Optionally enter 0–12 months of **historical net income** (after business costs) as monthly totals, plus "income earlier this month". Historical data is evidence only: it never enters the Pool. | P0 |
 | ONB-4 | Enter **current money** as opening balances: Pool, Available Spending, Savings, Investments. | P0 |
-| ONB-5 | Optionally add subscriptions (name, amount, monthly/yearly, next due date). | P1 |
+| ONB-5 | Optionally add subscriptions: name, price, **monthly or yearly (required, no default)**, next billing date. Yearly charges paid before onboarding are already inside the historical net income and are not spread again. | P1 |
 | ONB-6 | Show the salary recommendation with its explanation (SYSTEM-OVERVIEW §5.3). With < 3 months of data, show guidance instead. | P0 |
 | ONB-7 | The user chooses the salary. Above the recommendation requires seeing the worst-case depletion disclosure. | P0 |
 | ONB-8 | Explain that data lives only on this phone, and that uninstalling deletes it unless a backup exists. | P0 |
@@ -184,13 +186,52 @@ Priority: **P0** = first personal build · **P1** = before public release · **P
 
 ### 8.3 Business Costs & Subscriptions
 
+A **business cost** is money your work needs, paid from the Pool. A **subscription** is a business cost that repeats. Vanea looks at each cost in two ways:
+
+| View | What it shows | Used for |
+|---|---|---|
+| **Cash** | The full amount leaves the Pool on the payment date | Pool balance, "Pool never negative" |
+| **Monthly cost** | The cost as it belongs to each month (yearly charges spread evenly) | Monthly net income, and so the salary engine |
+
+#### 8.3.1 Spreading rule
+
+| Charge | Counts in monthly net income |
+|---|---|
+| Subscription billed **monthly** | In full, in the month it is paid |
+| Subscription billed **yearly** | **1/12 of the amount in each of the 12 months starting with the month it is paid** (the monthly share) |
+| Other business costs (Tools, Tax, Other) | In full, in the month paid (not spread in v1; see §14) |
+
+- The monthly share is rounded down; the remainder goes to the first month, so the 12 shares always add up to the amount paid.
+- Spreading applies **per charge**: the amount actually paid at each renewal is what gets spread.
+- Only completed months feed the salary engine; each remaining share counts when its month completes.
+- Cancelling or deleting a subscription does **not** undo a yearly charge already paid. The money is spent, so its shares keep counting until the 12 months end.
+- Correcting or removing a payment (a reversal) removes all of its shares.
+- Historical income entered at onboarding is already net of costs and is never spread.
+- Pool, runway and safe surplus always use real cash and current commitments, never the spread view. A large payment stays visible there.
+
+Example. Figma billed yearly, Rp 2.400.000 paid on 15 Oct 2026:
+
+| | Oct 2026 | Nov 2026 | … | Sep 2027 |
+|---|---|---|---|---|
+| Pool | −Rp 2.400.000 on 15 Oct | | | |
+| Monthly net income | −Rp 200.000 | −Rp 200.000 | … | −Rp 200.000 |
+
+With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in each of the other eleven.
+
+#### 8.3.2 Requirements
+
 | ID | Requirement | Priority |
 |---|---|---|
-| BIZ-1 | Record a business cost paid from the Pool: amount, date, category (Subscription, Tools, Tax, Other), note. Subject to the Pool invariant. | P0 |
-| BIZ-2 | Business costs reduce monthly net income used by the salary engine. | P0 |
-| BIZ-3 | Manage subscriptions: name, amount, cadence (monthly/yearly), next due date, active flag. | P1 |
-| BIZ-4 | On the due date, remind the user. One tap confirms and records the business cost (amount editable). Nothing is recorded without confirmation. | P1 |
-| BIZ-5 | Show committed monthly costs (monthly + yearly ÷ 12) in the Pool view. Commitments count toward runway. | P1 |
+| BIZ-1 | Record a business cost paid from the Pool: amount, date, category (Subscription, Tools, Tax, Other), note. Subject to the Pool invariant. **When the category is Subscription, Vanea always asks whether it is billed monthly or yearly.** The answer is required and has no default. It can be linked to a saved subscription or saved as a new one. Other categories are one-off and ask nothing extra. | P0 |
+| BIZ-2 | Business costs reduce the monthly net income used by the salary engine, following the spreading rule (§8.3.1). | P0 |
+| BIZ-3 | Subscriptions can be **added at any time, edited, and deleted** with no restrictions. Fields: name, billing cycle (monthly or yearly), price, next billing date, note. | P1 |
+| BIZ-4 | **Deleting** a subscription stops its reminders and removes it from monthly commitments. Charges already recorded stay in history under the subscription's name, and shares of a yearly charge already paid keep counting. The confirmation says exactly this. | P1 |
+| BIZ-5 | On the billing date, remind the user. One tap confirms and records the business cost with the subscription's cycle; the amount is editable. Nothing is recorded without confirmation. The user can also skip this billing (the next date advances) or delete the subscription. | P1 |
+| BIZ-6 | Each subscription keeps a **price history** (price and effective date). Reminders and commitments use the price in effect on the date. | P1 |
+| BIZ-7 | **Price increases (and decreases).** (a) At confirmation, if the amount entered differs from the expected price, Vanea asks: *"Did the price change?"* with **Yes, from now on** (the new price becomes effective from this billing date) and **Only this time** (the saved price stays). (b) The user can also record an announced change in advance: *new price from a date*. Until then reminders show the old price; from that date the new price applies to reminders and commitments automatically. (c) Past charges never change; a wrongly recorded charge is fixed through the normal correction flow. (d) A yearly subscription's new price applies from its next renewal; the year already paid keeps its old shares. | P1 |
+| BIZ-8 | When a price changes, show its calm impact: the new monthly commitment (yearly price ÷ 12) and the runway before and after. Example: *"Figma is now Rp 250.000 a month (was Rp 225.000). Your monthly commitments rise by Rp 25.000, to Rp 8.725.000. Your Pool still covers 2,8 months."* Runway is shown with one decimal, so a small rise may leave it unchanged. No pressure, no warning colors for ordinary changes. | P1 |
+| BIZ-9 | Show committed monthly costs in the Pool view: monthly subscriptions at their current price plus yearly subscriptions at current price ÷ 12. Commitments count toward runway and salary pressure. | P1 |
+| BIZ-10 | The subscription list shows name, cycle, price, monthly equivalent, next billing date and, when the price has changed, a quiet note such as *"+12% since Jan 2026"*. | P1 |
 
 ### 8.4 Salary
 
@@ -329,9 +370,9 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | Milestone | Content | Phase |
 |---|---|---|
 | **M0 — Engine** ✅ | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
-| **M1 — Core loop** | Onboarding, income, business costs, pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
+| **M1 — Core loop** | Onboarding, income, business costs (with the monthly/yearly question and spreading), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
 | **M2 — Salary decisions** | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
-| **M3 — Completeness** | Subscriptions and reminders, salary advance, savings, investments, surplus, intention, highlights, pace, notifications, app lock. | 1 |
+| **M3 — Completeness** | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, savings, investments, surplus, intention, highlights, pace, notifications, app lock. | 1 |
 | **Validation** | 3 months of real use. Re-run the simulation with real monthly totals; tune constants in `config.ts` if needed. | 1 |
 | **M4 — Public readiness** | Copy polish, accessibility pass, privacy policy, Play listing, Data safety form, production build without INTERNET permission. | 2 |
 | **M5 — Closed test** | ≥ 12 testers for 14 consecutive days; fix findings. | 2 |
@@ -349,15 +390,16 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | Thresholds wrong for real income | Bad recommendations | Simulation-validated defaults; constants centralized; re-validation after 3 months |
 | Salary set above recommendation | Pool runs out | Depletion disclosure at choice time; pressure warnings |
 | Play closed-test requirement (12 testers × 14 days) | Launch delay | Recruit testers during M4 |
+| Price increases go unnoticed and commitments creep up | Runway quietly shrinks | Confirmation-time price check (BIZ-7), impact message (BIZ-8), commitments always current in the Pool view |
 | SQLCipher key loss (Keystore reset) | Database unreadable | Key not bound to biometrics; regular exports |
 
 ---
 
 ## 14. Open Questions
 
-Resolved: income is IDR only (no USD income), and there is no tax reserve in v1.
+Resolved: income is IDR only (no USD income), there is no tax reserve in v1, and yearly subscriptions are spread evenly over 12 months.
 
-1. **Yearly subscriptions.** A yearly subscription paid in one month makes that month's net income look weak. Should yearly costs be spread across 12 months for the salary engine? v1 uses the month they are paid.
+1. **Spreading other large costs.** Yearly subscriptions are spread over 12 months (§8.3.1). Should a large one-off cost in Tools (a laptop, say) also be spreadable over a period the user chooses? v1 counts it in the month paid.
 2. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
 3. **iOS.** When, if ever?
 4. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
@@ -386,3 +428,7 @@ Resolved: income is IDR only (no USD income), and there is no tax reserve in v1.
 | 16 | IDR only; no multi-currency | Owner has no USD income |
 | 17 | No tax reserve in v1 | Owner decision |
 | 18 | Code organization rules: one function one job, private helpers, files grouped by concern | Owner decision; keeps the domain readable and testable |
+| 19 | Yearly subscription charges are spread evenly over the 12 months starting with the payment month, for the salary engine only | One annual payment must not make a single month look weak; cash and runway still use real amounts |
+| 20 | Recording a subscription cost always asks monthly or yearly (required, no default) | The cycle decides how the cost is spread and committed |
+| 21 | Subscriptions can be added, edited and deleted freely; deleting keeps history and already-paid yearly shares | Owner decision; financial history stays intact |
+| 22 | Subscription price changes: price history, check at confirmation, and announced future changes | Prices rise; Vanea should notice, explain the impact and keep commitments current |
