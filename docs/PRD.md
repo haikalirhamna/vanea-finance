@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.3
+**Version:** 2.4
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -85,6 +85,8 @@ Phase 2 publishing constraints (Google Play, personal developer account):
 
 - Indonesian, Android user, earns variable income in IDR.
 - Pays for several app subscriptions needed for work, out of income.
+- Has a credit card, PayLater and online-loan accounts; right now only **PayLater** has a balance to repay.
+- Holds investments, including volatile ones (stocks, crypto), and wants to record them without treating their market value as money they have.
 - Wants to stop treating every payment received as spending money, and to understand their finances better.
 
 ### 5.2 Secondary personas (Phase 2)
@@ -113,6 +115,7 @@ Phase 2 publishing constraints (Google Play, personal developer account):
 11. **Privacy and local ownership are foundational.**
 12. **Borrowed money is never income.** Loans and credit never enter monthly net income and never fund the salary engine.
 13. **Show the cost and the risk, never the advice.** Vanea states what a debt costs and how risky an asset class generally is; it never tells the user to borrow, buy or sell.
+14. **Market value is an estimate, not money you have.** Investment values are recorded and shown, but never count as spendable money, never feed the Pool, runway or salary, and are never added to cash in a single total.
 
 ---
 
@@ -194,7 +197,8 @@ Priority: **P0** = first personal build · **P1** = before public release · **P
 | ONB-7 | The user chooses the salary. Above the recommendation requires seeing the worst-case depletion disclosure. | P0 |
 | ONB-8 | Explain that data lives only on this phone, and that uninstalling deletes it unless a backup exists. | P0 |
 | ONB-9 | Calibration: during the first 3 salary periods the user may adjust salary freely (no gates, no cap). | P0 |
-| ONB-10 | Optionally add existing **debts** (credit lines with their current balance; loans with remaining installments) and **investment holdings** (asset class, cost, current value). An existing credit line balance is set aside from Available Spending by default; the user can mark it as older debt to repay over time instead. | P1 |
+| ONB-10 | Optionally add existing **debts**: credit lines with their current balance, and loans or PayLater installments with remaining installments. An existing credit line balance is set aside from Available Spending by default; the user can mark it as older debt to repay over time instead. | P0 |
+| ONB-11 | Optionally add existing **investment holdings**: asset class, amount put in and, if known, a current estimated value with its date. | P1 |
 
 ### 8.2 Income
 
@@ -277,8 +281,8 @@ With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in e
 | SPD-4 | Expenses are never blocked. Negative Available Spending shows a calm overspent state; the next salary covers it. | P0 |
 | SPD-5 | Pace message when spending runs > 15 points ahead of time (SYSTEM-OVERVIEW §7.3). | P1 |
 | SPD-6 | Recent spending list on the dashboard; full list filterable by month and category. | P0 |
-| SPD-7 | An expense records how it was paid: **Available Spending** (cash, debit, e-wallet — the default), a **credit line**, or as an **installment purchase** (§8.12). The Kakeibo category always counts the full price in the month of purchase. | P1 |
-| SPD-8 | The daily allowance sets aside personal debt payments due before the next payday: *"Rp 141.000 a day until 25 Oct, after Rp 650.000 in installments due before then."* | P1 |
+| SPD-7 | An expense records how it was paid: **Available Spending** (cash, debit, e-wallet — the default), a **credit line**, or as an **installment purchase** (§8.12). The Kakeibo category always counts the full price in the month of purchase. | P0 |
+| SPD-8 | The daily allowance sets aside personal debt payments due before the next payday: *"Rp 141.000 a day until 25 Oct, after Rp 650.000 in installments due before then."* | P0 |
 
 ### 8.6 Salary Advance
 
@@ -376,18 +380,21 @@ Fields: lender, type (online loan, bank loan, installment purchase, PayLater ins
 
 #### 8.12.3 Requirements
 
+PayLater (pay next month and installments) is the owner's active debt, so the shared debt core is **P0**. Business loans and the debt payment ratio card follow in P1.
+
 | ID | Requirement | Priority |
 |---|---|---|
-| DEBT-1 | Add, edit and close credit lines: name, type (credit card, PayLater), optional limit, statement day, due day. | P1 |
-| DEBT-2 | Pay an expense with a credit line (SPD-7). Record interest, fees and late fees as cost of borrowing. | P1 |
-| DEBT-3 | Pay a credit line bill: uses the bill reserve first, then Available Spending, and shows the split before confirming. | P1 |
-| DEBT-4 | Add installment loans with the fields above. Show the cost of borrowing and the approximate yearly rate before saving. | P1 |
-| DEBT-5 | Record installment payments, early payoff and late fees. Business loans are paid from the Pool, personal loans from Available Spending. | P1 |
+| DEBT-1 | Add, edit and close credit lines: name, type (credit card, PayLater), optional limit, statement day, due day. | P0 |
+| DEBT-2 | Pay an expense with a credit line (SPD-7). Record interest, fees and late fees as cost of borrowing. | P0 |
+| DEBT-3 | Pay a credit line bill: uses the bill reserve first, then Available Spending, and shows the split before confirming. | P0 |
+| DEBT-4 | Add installment loans with the fields above. Show the cost of borrowing and the approximate yearly rate before saving. | P0 |
+| DEBT-5 | Record installment payments, early payoff and late fees. Business loans are paid from the Pool, personal loans from Available Spending. | P0 |
 | DEBT-6 | Business loan money is marked as borrowed; the salary engine and safe surplus exclude business principal still owed. Borrowed money never enters monthly net income. | P1 |
-| DEBT-7 | Debts view: total owed, and for each debt its owed amount, next due date and amount, remaining installments, and the bill reserve for credit lines. | P1 |
+| DEBT-7 | Debts view: total owed, and for each debt its owed amount, next due date and amount, remaining installments, and the bill reserve for credit lines. | P0 |
 | DEBT-8 | **Debt payment ratio** = personal debt payments due this month ÷ salary, shown in the Debts view. Above **30%** (a common lending guideline, configurable) a calm card appears: *"Debt payments take 38% of your salary this month."* No advice on which debt to pay first. | P1 |
-| DEBT-9 | Local reminder on each due date (installments and credit line bills), on by default. | P1 |
-| DEBT-10 | Debts are never blocked: a new debt can always be recorded, even when the ratio is high (principle 8). | P1 |
+| DEBT-9 | Local reminder on each due date (installments and credit line bills), on by default. | P0 |
+| DEBT-10 | Debts are never blocked: a new debt can always be recorded, even when the ratio is high (principle 8). | P0 |
+| DEBT-11 | **Convert a credit line purchase to installments** after the fact (common for credit cards and PayLater). The purchase leaves the line's owed amount and bill reserve, the reserved money returns to Available Spending, and a new installment loan is created (with any conversion fee as cost of borrowing). The Kakeibo expense keeps its full price in the original month. | P1 |
 
 ### 8.13 Investments & Digital Assets
 
@@ -408,13 +415,23 @@ Vanea records investments by **holding** and **asset class**. It never connects 
 
 The risk label describes the asset class in general, not the user's holding, and is never advice. The UI says so once, where the labels appear.
 
+**Recording without assuming.** Investments are recorded so the user knows what they own, not to count market value as money:
+
+| Number | Meaning | Shown as |
+|---|---|---|
+| **Put in** | Money actually contributed, minus the cost of anything sold. Certain. | The main number for every holding and total |
+| **Estimated value** | The last value the user entered, with its date. Can change at any time. | Secondary, always with *"estimate · as of 12 Oct"*; for Low-risk classes simply *"value"* |
+| **On paper** | Estimated value − put in | Neutral text, no green or red, no celebration |
+
+Investment values are never part of Available Spending, the Pool, runway, safe surplus, the salary engine or any total that includes cash.
+
 **Rules**
 
 - A holding has a name (e.g. BBCA, BTC, a fund name), an asset class, an optional platform (e.g. Bibit, Ajaib, Indodax, Pluang) and a note.
 - **Contribution** (buy or top-up) comes from Available Spending or Pool surplus and adds to the holding's cost. Amounts are entered after fees.
 - **Value update**: the user enters the current value with a date; the history is kept. After 90 days without an update, Vanea notes *"value last updated 3 months ago"*.
-- **Sale or withdrawal**: the user enters the cash received and how much was sold (all, or a part). The cost of the sold part is removed proportionally, and **realized gain** = cash received − cost removed (negative is a loss). The cash goes to Available Spending (default) or Savings.
-- **Cash income** (dividends, coupons, deposit interest) enters the Pool as investment income. It is **excluded from monthly net income** used by the salary engine, because it is not earning capacity from work and can be irregular.
+- **Sale or withdrawal**: the user enters the cash received and how much was sold (all, or a part). The cost of the sold part is removed proportionally, and **realized gain** = cash received − cost removed (negative is a loss). The user **chooses** where the cash goes — Available Spending or Savings — with no default, because turning an investment into spending money is a deliberate decision.
+- **Cash income** (dividends, coupons, deposit interest) is recorded on its holding and **stays with the investments** by default (for example in the broker's cash account). It is not Available Spending, does not enter the Pool and is excluded from the salary engine. It becomes spendable only if the user later withdraws it to Available Spending or Savings.
 - **In-kind income** (staking rewards, reinvested dividends, bonus units) is recorded as a value update, not cash.
 
 **Requirements**
@@ -424,11 +441,12 @@ The risk label describes the asset class in general, not the user's holding, and
 | INV-1 | Add, edit and close holdings with name, asset class, platform and note. | P1 |
 | INV-2 | Record contributions from Available Spending or Pool surplus. | P1 |
 | INV-3 | Record value updates with a date; keep the history; flag values older than 90 days. | P1 |
-| INV-4 | Record sales (all or part) with cash received; compute realized gain or loss; send the cash to Available Spending or Savings. | P1 |
-| INV-5 | Record cash investment income into the Pool, excluded from the salary engine. | P1 |
-| INV-6 | Investments view: total cost, total last value (with the oldest update date), gain or loss on paper, and allocation by asset class with risk labels. | P1 |
-| INV-7 | When one asset class with High or Very high risk is more than 50% of total last value, a calm note: *"62% of your investments are in crypto, an asset class with very high general risk."* Shown in the Investments view only, never as a notification. | P1 |
-| INV-8 | A secondary **net position** screen (savings + investments last value + Pool + Available Spending − debts owed). Never on the dashboard; Available Spending stays the hero number. | P2 |
+| INV-4 | Record sales (all or part) with cash received; compute realized gain or loss; the user explicitly chooses Available Spending or Savings for the cash. | P1 |
+| INV-5 | Record cash investment income on its holding; it stays with the investments until the user withdraws it. Never counted as Available Spending, Pool or salary-engine income. | P1 |
+| INV-6 | Investments view: **put in** as the main total; estimated value (with the oldest "as of" date) and on-paper difference as secondary, neutral text; allocation by asset class (by put in) with risk labels. | P1 |
+| INV-7 | When one asset class with High or Very high risk is more than 50% of total **put in**, a calm note: *"62% of your investments are in crypto, an asset class with very high general risk."* Shown in the Investments view only, never as a notification. | P1 |
+| INV-8 | A secondary **net position** screen in three separate groups, never summed into one number: **Money** (Pool, Available Spending, Savings), **Investments** (put in, with estimated value beside it) and **Debts** (owed). Never on the dashboard. | P2 |
+| INV-9 | No investment number appears on the dashboard, in notifications or in the salary screens. | P1 |
 
 ---
 
@@ -485,7 +503,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | Milestone | Content | Phase |
 |---|---|---|
 | **M0 — Engine** ✅ | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
-| **M1 — Core loop** | Onboarding, income, business costs (with the monthly/yearly question and spreading), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
+| **M1 — Core loop** | Onboarding, income, business costs (with the monthly/yearly question and spreading), PayLater and the debt core (credit lines, installment loans, bill reserve, due reminders), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
 | **M2 — Salary decisions** | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
 | **M3 — Completeness** | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, debts (credit lines, installment loans), savings, investments by asset class, surplus, intention, highlights, pace, notifications, app lock. | 1 |
 | **Validation** | 3 months of real use. Re-run the simulation with real monthly totals; tune constants in `config.ts` if needed. | 1 |
@@ -515,16 +533,12 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 
 ## 14. Open Questions
 
-Resolved: income is IDR only (no USD income), there is no tax reserve in v1, and yearly subscriptions are spread evenly over 12 months.
+Resolved: income is IDR only (no USD income); no tax reserve in v1; yearly subscriptions are spread over 12 months; the debt core is P0 because of PayLater; the debt payment ratio line is 30%; credit line purchases can be converted to installments; investment income is not spendable and not salary-engine income.
 
 1. **Spreading other large costs.** Yearly subscriptions are spread over 12 months (§8.3.1). Should a large one-off cost in Tools (a laptop, say) also be spreadable over a period the user chooses? v1 counts it in the month paid.
 2. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
 3. **iOS.** When, if ever?
 4. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
-5. **Debts priority.** Do you currently use a credit card, PayLater or an online loan? If yes, should debts move from P1 to P0 (the first personal build)?
-6. **Debt payment ratio threshold.** Is 30% the right line for the calm card?
-7. **Converting card purchases to installments.** Indonesian cards often let a purchase be converted to an installment plan later. v1 asks to record it as an installment purchase from the start. Is a later "convert" action needed?
-8. **Investment income.** Dividends and coupons enter the Pool but are excluded from the salary engine. Agree?
 
 ---
 
@@ -561,3 +575,8 @@ Resolved: income is IDR only (no USD income), there is no tax reserve in v1, and
 | 27 | Investments tracked by holding and asset class with general risk labels and manual values | Covers stocks, funds, bonds, gold and crypto without network access |
 | 28 | Realized gains on sale; cash investment income enters the Pool but not the salary engine | Investment returns are real money but not earning capacity from work |
 | 29 | E-wallet balances are money, not debts or investments | Avoids double counting |
+| 30 | Debt core (credit lines, installment loans) moves to P0 | The owner has an active PayLater balance |
+| 31 | Debt payment ratio card at 30% | Owner confirmed |
+| 32 | Credit line purchases can be converted to installments later | Owner confirmed; common for cards and PayLater |
+| 33 | Investments show **put in** as the main number and market value only as a dated estimate; never summed with cash | Record what you own without assuming volatile prices are money you have |
+| 34 | Investment cash income stays with the investments; sale proceeds go where the user explicitly chooses | Investment money becomes spendable only by a deliberate decision |
