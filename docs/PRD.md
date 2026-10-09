@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -58,6 +58,9 @@ People with variable income — freelancers, creators, contractors, side-hustler
 - Gamification: scores, streaks, badges, leaderboards.
 - Multi-currency, iOS, cloud sync, multi-device, shared/family use.
 - Tax calculation or tax reserves (tax payments, if any, can be recorded as a business cost).
+- Connecting to banks, card issuers, lenders, brokers or crypto exchanges; live prices or market data (values are updated by hand).
+- Recommending a loan, a lender, an investment or when to buy or sell. Vanea shows costs and general risk; the user decides.
+- Tax on investment gains; property and vehicles as tracked assets.
 
 ---
 
@@ -108,6 +111,8 @@ Phase 2 publishing constraints (Google Play, personal developer account):
 9. **Explain every consequential number.** No black-box scores, no fake precision.
 10. **Reflection over gamification.**
 11. **Privacy and local ownership are foundational.**
+12. **Borrowed money is never income.** Loans and credit never enter monthly net income and never fund the salary engine.
+13. **Show the cost and the risk, never the advice.** Vanea states what a debt costs and how risky an asset class generally is; it never tells the user to borrow, buy or sell.
 
 ---
 
@@ -128,9 +133,13 @@ INCOME ──────────▶ POOL ── salary payment ──▶ AV
 | **Pool** | All income enters here. Pays salary and business costs. **Never negative.** |
 | **Available Spending** | Personal money. Filled by salary, spent by expenses. **Rolls over** between periods. **May go negative** (overspent). |
 | **Savings** | Filled from Available Spending or from Pool surplus. Never negative. |
-| **Investments** | Recorded contributions and withdrawals (no market valuation in v1). Never negative. |
+| **Investments** | Holdings grouped by asset class (§8.13). Cost from contributions; value updated by hand. Never negative. |
+| **Debts** | What the user owes: credit lines and installment loans (§8.12). Shown separately; never mixed into Pool or Available Spending. |
+| **Bill reserve** | Per credit line: money already taken out of Available Spending for purchases on that line, waiting for the bill. |
 
 All balances are derived from immutable transactions (SYSTEM-OVERVIEW §6).
+
+E-wallet balances (GoPay, OVO, DANA, ShopeePay and similar) are **money**, not debts or investments. Like cash or a bank account, they sit inside Available Spending or Savings. A PayLater feature inside those apps is a debt (§8.12).
 
 ### 7.1 Glossary (user-facing terms)
 
@@ -146,6 +155,16 @@ All balances are derived from immutable transactions (SYSTEM-OVERVIEW §6).
 | **Subscription** | A recurring business cost billed **monthly** or **yearly**. Its price can change over time. |
 | **Monthly share** | A yearly charge divided evenly over the 12 months it covers, so one big payment does not make a single month look weak |
 | **Price change** | A new price for a subscription, effective from a billing date. Past charges never change. |
+| **Debt** | Money owed to someone else: a credit line or an installment loan |
+| **Credit line** | Buy now, pay the bill later: credit cards and pay-next-month PayLater |
+| **Installment loan** | Fixed payments over time: online loans, bank loans, installment purchases, PayLater 3/6/12×, card installment plans, loans from family or friends |
+| **Bill reserve** | Money set aside from Available Spending for a credit line's next bill |
+| **Cost of borrowing** | Everything repaid beyond the amount received: interest, fees, late fees |
+| **Debt payment ratio** | Personal debt payments due this month as a share of salary |
+| **Holding** | One investment, such as a stock, a fund, gold or a crypto coin |
+| **Asset class** | The kind of investment (stocks, bonds, gold, crypto…), each with a general risk label |
+| **Last value** | The value the user last entered for a holding, with its date |
+| **Realized gain** | Proceeds of a sale minus the cost of what was sold (negative is a loss) |
 | **Typical income** | The middle value of your recent monthly income, after business costs |
 | **Usual swing** | How much your income normally moves month to month |
 | **Salary review** | Vanea's monthly check of whether a raise is justified |
@@ -175,6 +194,7 @@ Priority: **P0** = first personal build · **P1** = before public release · **P
 | ONB-7 | The user chooses the salary. Above the recommendation requires seeing the worst-case depletion disclosure. | P0 |
 | ONB-8 | Explain that data lives only on this phone, and that uninstalling deletes it unless a backup exists. | P0 |
 | ONB-9 | Calibration: during the first 3 salary periods the user may adjust salary freely (no gates, no cap). | P0 |
+| ONB-10 | Optionally add existing **debts** (credit lines with their current balance; loans with remaining installments) and **investment holdings** (asset class, cost, current value). An existing credit line balance is set aside from Available Spending by default; the user can mark it as older debt to repay over time instead. | P1 |
 
 ### 8.2 Income
 
@@ -257,6 +277,8 @@ With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in e
 | SPD-4 | Expenses are never blocked. Negative Available Spending shows a calm overspent state; the next salary covers it. | P0 |
 | SPD-5 | Pace message when spending runs > 15 points ahead of time (SYSTEM-OVERVIEW §7.3). | P1 |
 | SPD-6 | Recent spending list on the dashboard; full list filterable by month and category. | P0 |
+| SPD-7 | An expense records how it was paid: **Available Spending** (cash, debit, e-wallet — the default), a **credit line**, or as an **installment purchase** (§8.12). The Kakeibo category always counts the full price in the month of purchase. | P1 |
+| SPD-8 | The daily allowance sets aside personal debt payments due before the next payday: *"Rp 141.000 a day until 25 Oct, after Rp 650.000 in installments due before then."* | P1 |
 
 ### 8.6 Salary Advance
 
@@ -267,14 +289,14 @@ With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in e
 | ADV-3 | Early repayment from Available Spending. | P1 |
 | ADV-4 | Show outstanding amount and remaining periods. | P1 |
 
-### 8.7 Savings, Investments & Surplus
+### 8.7 Savings & Surplus
 
 | ID | Requirement | Priority |
 |---|---|---|
 | SAV-1 | Deposit to / withdraw from Savings (from/to Available Spending). Withdrawals ≤ balance. | P1 |
-| SAV-2 | Record investment contributions and withdrawals with an asset label. No price tracking. | P1 |
+| SAV-2 | Investments moved to §8.13. | — |
 | SAV-3 | Show **safe surplus** = Pool − buffer × monthly commitments (buffer default 3 months, editable). | P1 |
-| SAV-4 | Allocate Pool surplus directly to Savings or Investments. Amounts above the safe surplus are allowed after showing the resulting runway. | P1 |
+| SAV-4 | Allocate Pool surplus directly to Savings, an investment holding, or a **debt repayment**. Amounts above the safe surplus are allowed after showing the resulting runway. Vanea does not suggest which destination. | P1 |
 
 ### 8.8 Monthly Intention & Reflection (Kakeibo)
 
@@ -286,6 +308,7 @@ With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in e
 | REF-4 | Up to 2 automatic highlights of meaningful category changes (SYSTEM-OVERVIEW §8). | P1 |
 | REF-5 | Intention vs actual, and Wants vs limit, without scores. | P1 |
 | REF-6 | Past reflections are readable, including the numbers as they were at reflection time. | P1 |
+| REF-7 | The reflection shows debt and investment lines **separately from Kakeibo spending**: debt payments, cost of borrowing (interest and fees), investment income and realized gains or losses for the month. | P1 |
 
 ### 8.9 Corrections
 
@@ -317,9 +340,101 @@ With Rp 1.000.000 the shares are Rp 83.337 in the first month and Rp 83.333 in e
 
 ---
 
+### 8.12 Debts: Credit Cards, PayLater & Loans
+
+Vanea records debts so the user sees what borrowing costs and how much of their salary it takes. It never connects to lenders and never recommends borrowing.
+
+| Kind | Examples | How it affects Available Spending |
+|---|---|---|
+| **Credit line** (pay the bill later) | Credit card, PayLater paid next month | A purchase lowers Available Spending **immediately** and moves into the line's **bill reserve**. Paying the bill uses the reserve. |
+| **Installment loan** (fixed payments) | Online loans (pinjol), bank loans (KTA), installment purchases (phone, motorbike), PayLater 3/6/12×, card installment plans, loans from family or friends | The money received is not income. Each installment lowers Available Spending (or the Pool, for a business loan) when it is paid. |
+
+The salary advance (§8.6) is borrowing from your own Pool. It stays separate, without interest, and is listed in the Debts view for a complete picture.
+
+#### 8.12.1 Credit lines
+
+| Event | Effect |
+|---|---|
+| Purchase on the line | A normal expense with its Kakeibo category: Available Spending −, bill reserve +, owed + |
+| Interest, fees, late fees | **Cost of borrowing** (not a Kakeibo category): Available Spending −, bill reserve +, owed + |
+| Paying the bill | Owed −. The bill reserve is used first; any part beyond it (older balance) lowers Available Spending. |
+
+So Available Spending is always honest: money spent on a card is already gone from it, even before the bill arrives.
+
+#### 8.12.2 Installment loans
+
+Fields: lender, type (online loan, bank loan, installment purchase, PayLater installments, card installment plan, family or friends, other), **purpose (personal or business)**, amount received, installment amount, number of installments, frequency (monthly, or a single payment for short online loans), first due date. For online loans, also: *registered with OJK?* (yes / no / not sure).
+
+- **Cost of borrowing** = installment × number of installments − amount received. Shown before saving, with an approximate yearly rate implied by the schedule: *"You receive Rp 2.000.000 and repay Rp 2.600.000 in 30 days. This loan costs Rp 600.000 — 30% of what you borrow, about 365% a year."*
+- Each installment is split into principal and interest, with interest spread evenly across installments.
+- **Personal loan.** The amount received goes to Available Spending. Installments are paid from Available Spending: the principal part lowers what is owed, and the interest part is cost of borrowing.
+- **Installment purchase.** The item is recorded as an expense of its full price in the month of purchase (for reflection), but Available Spending only drops as installments are paid.
+- **Business loan.** The amount received goes to the Pool, marked as borrowed. The salary engine and safe surplus use **Pool minus business principal still owed**, so borrowed money never pays salary. Installments come from the Pool; the interest part is a business cost (it lowers monthly net income) and the principal part is not.
+- **Early payoff** records the amount actually paid and clears the rest; the interest saved is shown.
+- **Missed installment**: it stays due; late fees are cost of borrowing. Nothing changes automatically.
+- Adding an online loan shows one neutral line: *"Check that the lender is registered with OJK."*
+
+#### 8.12.3 Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| DEBT-1 | Add, edit and close credit lines: name, type (credit card, PayLater), optional limit, statement day, due day. | P1 |
+| DEBT-2 | Pay an expense with a credit line (SPD-7). Record interest, fees and late fees as cost of borrowing. | P1 |
+| DEBT-3 | Pay a credit line bill: uses the bill reserve first, then Available Spending, and shows the split before confirming. | P1 |
+| DEBT-4 | Add installment loans with the fields above. Show the cost of borrowing and the approximate yearly rate before saving. | P1 |
+| DEBT-5 | Record installment payments, early payoff and late fees. Business loans are paid from the Pool, personal loans from Available Spending. | P1 |
+| DEBT-6 | Business loan money is marked as borrowed; the salary engine and safe surplus exclude business principal still owed. Borrowed money never enters monthly net income. | P1 |
+| DEBT-7 | Debts view: total owed, and for each debt its owed amount, next due date and amount, remaining installments, and the bill reserve for credit lines. | P1 |
+| DEBT-8 | **Debt payment ratio** = personal debt payments due this month ÷ salary, shown in the Debts view. Above **30%** (a common lending guideline, configurable) a calm card appears: *"Debt payments take 38% of your salary this month."* No advice on which debt to pay first. | P1 |
+| DEBT-9 | Local reminder on each due date (installments and credit line bills), on by default. | P1 |
+| DEBT-10 | Debts are never blocked: a new debt can always be recorded, even when the ratio is high (principle 8). | P1 |
+
+### 8.13 Investments & Digital Assets
+
+Vanea records investments by **holding** and **asset class**. It never connects to brokers or exchanges and has no live prices: the user updates values by hand.
+
+| Asset class | Examples | General risk |
+|---|---|---|
+| Time deposit | Deposito | Low |
+| Government bonds | SBN: ORI, SBR, ST, sukuk | Low |
+| Money market fund | Reksa dana pasar uang | Low |
+| Fixed income fund | Reksa dana pendapatan tetap, corporate bonds | Low–medium |
+| Mixed fund | Reksa dana campuran | Medium |
+| Gold | Physical gold, digital gold | Medium |
+| Equity fund | Reksa dana saham, index funds, ETFs | High |
+| Stocks | IDX or foreign shares | High |
+| Crypto & digital assets | Bitcoin, Ethereum, stablecoins, other tokens, NFTs | Very high |
+| Other | P2P lending as a lender, anything else | Set by the user |
+
+The risk label describes the asset class in general, not the user's holding, and is never advice. The UI says so once, where the labels appear.
+
+**Rules**
+
+- A holding has a name (e.g. BBCA, BTC, a fund name), an asset class, an optional platform (e.g. Bibit, Ajaib, Indodax, Pluang) and a note.
+- **Contribution** (buy or top-up) comes from Available Spending or Pool surplus and adds to the holding's cost. Amounts are entered after fees.
+- **Value update**: the user enters the current value with a date; the history is kept. After 90 days without an update, Vanea notes *"value last updated 3 months ago"*.
+- **Sale or withdrawal**: the user enters the cash received and how much was sold (all, or a part). The cost of the sold part is removed proportionally, and **realized gain** = cash received − cost removed (negative is a loss). The cash goes to Available Spending (default) or Savings.
+- **Cash income** (dividends, coupons, deposit interest) enters the Pool as investment income. It is **excluded from monthly net income** used by the salary engine, because it is not earning capacity from work and can be irregular.
+- **In-kind income** (staking rewards, reinvested dividends, bonus units) is recorded as a value update, not cash.
+
+**Requirements**
+
+| ID | Requirement | Priority |
+|---|---|---|
+| INV-1 | Add, edit and close holdings with name, asset class, platform and note. | P1 |
+| INV-2 | Record contributions from Available Spending or Pool surplus. | P1 |
+| INV-3 | Record value updates with a date; keep the history; flag values older than 90 days. | P1 |
+| INV-4 | Record sales (all or part) with cash received; compute realized gain or loss; send the cash to Available Spending or Savings. | P1 |
+| INV-5 | Record cash investment income into the Pool, excluded from the salary engine. | P1 |
+| INV-6 | Investments view: total cost, total last value (with the oldest update date), gain or loss on paper, and allocation by asset class with risk labels. | P1 |
+| INV-7 | When one asset class with High or Very high risk is more than 50% of total last value, a calm note: *"62% of your investments are in crypto, an asset class with very high general risk."* Shown in the Investments view only, never as a notification. | P1 |
+| INV-8 | A secondary **net position** screen (savings + investments last value + Pool + Available Spending − debts owed). Never on the dashboard; Available Spending stays the hero number. | P2 |
+
+---
+
 ## 9. Scope Summary
 
-**In v1:** income, business costs, subscriptions, Pool, salary recommendation, salary payments, salary review, decrease and restore, salary pressure warnings, Available Spending with daily allowance and pace, expenses in four Kakeibo categories, salary advance, savings, investments (records only), surplus allocation, monthly intention and reflection, historical income, opening balances, corrections, encrypted local storage, app lock, encrypted export/import, local notifications.
+**In v1:** income, business costs, subscriptions, Pool, salary recommendation, salary payments, salary review, decrease and restore, salary pressure warnings, Available Spending with daily allowance and pace, expenses in four Kakeibo categories, salary advance, debts (credit cards, PayLater, online and bank loans, installment purchases), savings, investments by holding and asset class (including stocks, funds, gold and crypto; manual values), surplus allocation, monthly intention and reflection, historical income, opening balances, corrections, encrypted local storage, app lock, encrypted export/import, local notifications.
 
 **Out of v1:** see §3 Non-goals.
 
@@ -372,7 +487,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | **M0 — Engine** ✅ | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
 | **M1 — Core loop** | Onboarding, income, business costs (with the monthly/yearly question and spreading), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
 | **M2 — Salary decisions** | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
-| **M3 — Completeness** | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, savings, investments, surplus, intention, highlights, pace, notifications, app lock. | 1 |
+| **M3 — Completeness** | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, debts (credit lines, installment loans), savings, investments by asset class, surplus, intention, highlights, pace, notifications, app lock. | 1 |
 | **Validation** | 3 months of real use. Re-run the simulation with real monthly totals; tune constants in `config.ts` if needed. | 1 |
 | **M4 — Public readiness** | Copy polish, accessibility pass, privacy policy, Play listing, Data safety form, production build without INTERNET permission. | 2 |
 | **M5 — Closed test** | ≥ 12 testers for 14 consecutive days; fix findings. | 2 |
@@ -391,6 +506,9 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | Salary set above recommendation | Pool runs out | Depletion disclosure at choice time; pressure warnings |
 | Play closed-test requirement (12 testers × 14 days) | Launch delay | Recruit testers during M4 |
 | Price increases go unnoticed and commitments creep up | Runway quietly shrinks | Confirmation-time price check (BIZ-7), impact message (BIZ-8), commitments always current in the Pool view |
+| Credit purchases recorded without the credit line | Available Spending and owed amounts drift apart | "Paid with" on the expense form; credit line bill shows reserve vs owed so gaps are visible |
+| High-cost online loans look small per installment | Users underestimate the cost | Cost of borrowing and approximate yearly rate shown before saving (DEBT-4) |
+| Investment values go stale | Misleading totals | "As of" dates everywhere, 90-day staleness note, values never on the dashboard |
 | SQLCipher key loss (Keystore reset) | Database unreadable | Key not bound to biometrics; regular exports |
 
 ---
@@ -403,6 +521,10 @@ Resolved: income is IDR only (no USD income), there is no tax reserve in v1, and
 2. **Multiple savings goals.** v1 has one Savings balance. Are named goals needed?
 3. **iOS.** When, if ever?
 4. **Cloud backup.** Should a later version support saving backups directly to a user-chosen folder (e.g. Google Drive via the system file picker) on a schedule?
+5. **Debts priority.** Do you currently use a credit card, PayLater or an online loan? If yes, should debts move from P1 to P0 (the first personal build)?
+6. **Debt payment ratio threshold.** Is 30% the right line for the calm card?
+7. **Converting card purchases to installments.** Indonesian cards often let a purchase be converted to an installment plan later. v1 asks to record it as an installment purchase from the start. Is a later "convert" action needed?
+8. **Investment income.** Dividends and coupons enter the Pool but are excluded from the salary engine. Agree?
 
 ---
 
@@ -432,3 +554,10 @@ Resolved: income is IDR only (no USD income), there is no tax reserve in v1, and
 | 20 | Recording a subscription cost always asks monthly or yearly (required, no default) | The cycle decides how the cost is spread and committed |
 | 21 | Subscriptions can be added, edited and deleted freely; deleting keeps history and already-paid yearly shares | Owner decision; financial history stays intact |
 | 22 | Subscription price changes: price history, check at confirmation, and announced future changes | Prices rise; Vanea should notice, explain the impact and keep commitments current |
+| 23 | Debts grouped into **credit lines** and **installment loans** | Covers credit cards, PayLater, online loans, bank loans, installment purchases and personal loans with two clear behaviors |
+| 24 | Credit purchases lower Available Spending immediately and fill a bill reserve | Available Spending stays honest before the bill arrives |
+| 25 | Borrowed money is never income; business loan money is excluded from the salary engine | A loan must never fund or raise a salary |
+| 26 | Cost of borrowing and an approximate yearly rate shown before saving a loan; debt payment ratio with a calm card above 30% | Awareness of what debt costs, without advice |
+| 27 | Investments tracked by holding and asset class with general risk labels and manual values | Covers stocks, funds, bonds, gold and crypto without network access |
+| 28 | Realized gains on sale; cash investment income enters the Pool but not the salary engine | Investment returns are real money but not earning capacity from work |
+| 29 | E-wallet balances are money, not debts or investments | Avoids double counting |
