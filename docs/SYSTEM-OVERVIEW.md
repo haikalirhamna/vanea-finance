@@ -93,37 +93,46 @@ src/
                                 parity.test.ts      TypeScript vs the Python reference (fixtures/parity.json)
                                 invariants.test.ts  property tests (fast-check)
                                 helpers/builders.ts transaction and series builders
-  data/
-    database.ts               Open encrypted DB, key handling, migrations runner
-    schema.ts                 Table definitions and migrations
-    profile.ts                Profile and settings
-    transactions.ts           Transactions and movements (append-only writes)
-    salary.ts                 Salary settings, evaluations, advances
-    subscriptions.ts          Subscriptions and their price history
-    debts.ts                  Credit lines and installment loans
-    investments.ts            Holdings and valuations
-    planning.ts               Historical income months, intentions, reflections
-    backup.ts                 Export and import
-  features/<feature>/         One folder per feature (dashboard, income, salary, spending, subscriptions, debts, investments, reflection, settings)
-    <feature>-hooks.ts        All hooks of the feature in one file
-    components/               Feature-specific components, grouped by screen section
-  components/                 Shared UI components
-    theme.ts                  Design tokens: colors, gradients, radii, spacing, shadows, type (DESIGN §8)
+  data/                       SQLite access, no UI. Same repositories on the phone (SQLCipher) and in tests/web (sql.js)
+    driver.ts                 SqlDriver interface: exec, run, all, transaction, close
+    driver-expo.ts            expo-sqlite with SQLCipher; raw 256-bit key; serialized transactions
+    driver-memory.ts          sql.js (asm build) — real SQLite for tests and the web preview
+    database.ts               Migrations runner and prepareDatabase
+    schema.ts                 Table definitions and migrations (v1)
+    rows.ts                   snake_case <-> camelCase row mapping, insert/update helpers
+    profile.ts, transactions.ts, salary.ts, subscriptions.ts, debts.ts, planning.ts   One repository per concern
+    snapshot.ts               loadSnapshot: everything the app computes from, loaded once
+    backup-crypto.ts          scrypt + XChaCha20-Poly1305 envelope with an authenticated header
+    backup.ts                 Export payload, parse, verify balances, import
+  features/                   Application services: use the domain rules and the data layer, no React
+    action-runtime.ts         ActionContext, runAtomic (rollback on refusal), writeBatch/commitBatch (validate then write)
+    errors.ts                 ExplainedError {title, what, next} and the wording of ledger refusals
+    <feature>/<feature>-actions.ts   One file per feature: onboarding, income, spending, business, salary, debts, corrections, settings, backup
+    dashboard/                dashboard-summary.ts (everything Home shows), notification-plan.ts (what to remind, when)
+    activity/                 activity-list.ts (the Activity list)
+  state/AppState.tsx          AppProvider: opens the database, keeps the snapshot, `act()` runs an action and refreshes
+  platform/                   Everything that touches the phone; each file has a `.web.ts` twin for the preview
+    database.ts               Key in the Android Keystore (expo-secure-store), opens the encrypted database
+    backup-files.ts           Write to cache + share sheet; document picker
+    reminders.ts              Replace all scheduled local notifications with the plan
+  screens/                    One component per screen; `app/` files only re-export them
+  components/                 Shared UI components (theme tokens, text, buttons, cards, rows, fields, sheets, bottom bar)
   lib/
     format.ts                 Money, number and date formatting
-    notifications.ts          Local notification scheduling
-    security.ts               App lock and key storage helpers
+    calendar-grid.ts          Month grid for the date picker
 ```
 
 ### 3.2 Dependency Rules
 
 | Layer | May import |
 |---|---|
-| `app/`, `src/features/` | `src/domain`, `src/data`, `src/components`, `src/lib` |
+| `app/`, `src/screens/`, `src/state/` | `src/domain` (types), `src/features`, `src/components`, `src/lib`, `src/platform` |
+| `src/features/` | `src/domain`, `src/data`, `src/lib` (no React, no Expo modules) |
+| `src/platform/` | `src/data`, `src/features` types, Expo native modules |
 | `src/data/` | `src/domain` (types and validation only) |
 | `src/domain/` | Only `src/domain`. **No** `react`, `react-native`, `expo-*`, or database imports. |
 
-Screens contain no financial rules. A screen asks a hook for a value; the hook reads records through `src/data` and computes with `src/domain`.
+Screens contain no financial rules. They read `snapshot` and `dashboard` from `useApp()`, show values already computed by `src/features`, and run changes through `act(action)`. Size limits are enforced by ESLint: 40 lines per function (60 for components in `.tsx`), complexity 10, 400 lines per file.
 
 ### 3.3 Code Organization Rules
 

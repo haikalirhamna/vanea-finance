@@ -92,7 +92,7 @@ Every financial event. Immutable except for descriptive fields (SYSTEM-OVERVIEW 
 | expense_category | TEXT NULL | `expense`: `needs`/`wants`/`growth`/`unexpected` (editable) |
 | business_cost_category | TEXT NULL | `business_cost`: `subscription`/`tools`/`tax`/`other` (editable) |
 | source | TEXT NULL | `income`: who paid (editable) |
-| asset | TEXT NULL | Free investment label (v2.0 only; replaced by `holding_id` in M0.1) |
+| asset | — | Removed in M0.1: investments are identified by `holding_id` |
 | note | TEXT NULL | Editable |
 | salary_period | TEXT NULL | `salary_payment`: `YYYY-MM` |
 | advance_installment | INTEGER NULL | `salary_payment`: amount withheld for an advance in this payment (≥ 0) |

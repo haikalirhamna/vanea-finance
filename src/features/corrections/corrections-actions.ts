@@ -20,6 +20,9 @@ const EDITABLE: readonly TransactionKind[] = ['income', 'expense', 'business_cos
 /** Kinds the user can remove. Opening balances and loan starts are not: remove the debt instead. */
 const REMOVABLE: readonly TransactionKind[] = [...EDITABLE, 'salary_payment', 'debt_payment'];
 
+export const canEdit = (kind: TransactionKind): boolean => EDITABLE.includes(kind);
+export const canRemove = (kind: TransactionKind): boolean => REMOVABLE.includes(kind);
+
 export interface TransactionEdit {
   amount?: number;
   date?: DateString;

@@ -2,7 +2,7 @@
 
 A local-first Android app for people with variable income. Income goes into a **Pool**; you pay yourself a steady **salary** from it; Vanea shows what you can spend each day, warns calmly when your salary outpaces your income, and guides a monthly Kakeibo reflection.
 
-**Status:** M0 and M0.1 done — the financial engine (`src/domain`) is implemented and tested: salary engine, ledger, subscriptions, debts and investments. The app itself (Expo) starts in M1.
+**Status:** M0, M0.1 and M1 done. The financial engine (`src/domain`) and the core loop are implemented: onboarding, income, business costs, expenses, salary payment, PayLater/credit lines/loans, corrections, encrypted export/import, local reminders. Not yet verified on a real Android device (see below). Next: M2 (salary decisions).
 
 ## Documents
 
@@ -28,13 +28,19 @@ Results are summarized in [System Overview §5.8](docs/SYSTEM-OVERVIEW.md#58-sim
 
 ```sh
 npm install
-npm test               # 361 unit, property and parity tests
+npm test               # 533 tests: domain, data (real SQLite), features, screens
 npm run test:coverage  # coverage for src/domain
 npm run typecheck
 npm run lint           # also enforces: src/domain imports nothing outside src/domain
+npm run web            # preview in a browser (data is in memory only)
+npm run android        # development build on a device or emulator
 ```
 
 `src/domain` is pure TypeScript (no React, Expo or SQLite). Code organization rules are in [System Overview §3.3](docs/SYSTEM-OVERVIEW.md).
+
+### What is and isn't verified
+
+Verified in the build environment: all tests, type check, lint, the web export (browser walkthrough of onboarding, expense, debts) and the Android bundle compiling to Hermes bytecode. **Not verified (no device or emulator was available):** SQLCipher encryption on a phone, the Android Keystore key, the share sheet and file picker, local notifications, and scrypt speed (N = 2^15) on Hermes. Check these first on a real device.
 
 To regenerate the Python parity fixtures after changing a rule or constant:
 

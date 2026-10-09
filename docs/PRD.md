@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.5
+**Version:** 2.6
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -504,7 +504,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 |---|---|---|
 | **M0 — Engine** ✅ | `src/domain`: ledger, monthly net income, salary engine, pressure, insights. Full test suite, parity with the Python reference simulation. No UI. | 1 |
 | **M0.1 — Engine update** ✅ | `src/domain` for PRD v2.2–2.4: yearly subscription spreading and price history, credit lines and bill reserve, installment loans (cost of borrowing, yearly rate, interest split), own Pool without business-loan money, debt-aware daily allowance and payment ratio, investments by holding with put in and estimated values. Specified in SYSTEM-OVERVIEW (marked M0.1). | 1 |
-| **M1 — Core loop** | Onboarding, income, business costs (with the monthly/yearly question and spreading), PayLater and the debt core (credit lines, installment loans, bill reserve, due reminders), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
+| **M1 — Core loop** ✅ | Onboarding, income, business costs (with the monthly/yearly question and spreading), PayLater and the debt core (credit lines, installment loans, bill reserve, due reminders), pay salary, expenses, dashboard (Available Spending, daily allowance, runway), corrections, encrypted DB, export/import. | 1 |
 | **M2 — Salary decisions** | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
 | **M3 — Completeness** | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, debts (credit lines, installment loans), savings, investments by asset class, surplus, intention, highlights, pace, notifications, app lock. | 1 |
 | **Validation** | 3 months of real use. Re-run the simulation with real monthly totals; tune constants in `config.ts` if needed. | 1 |

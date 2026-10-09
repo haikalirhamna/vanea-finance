@@ -105,7 +105,7 @@ All numbers use Indonesian formatting, because every amount is in rupiah:
   October reflection                     →
 
 ╭──────[⌂]─────[▥]─────(＋)─────[✎]─────[⋯]──────╮  ← bottom bar; center action with glow
-     Home   Salary   Expense  Reflect   More
+     Home   Salary   Expense  Activity  More
 ```
 
 - The hero number and the daily allowance are the only large elements.
@@ -407,7 +407,7 @@ At most one floating layer per region: the floating card *or* a bottom sheet, ne
 | **Floating action card** | `surface`, `radius-lg`, `elevation-float`, straddles the hero/sheet seam; four items, each an icon tile + caption. |
 | **Icon tile** | 48 dp, `radius-md`, `violet-50` fill, 24 dp `violet-700` line icon (1,75 dp stroke). On deep surfaces: white 12% fill, white icon. |
 | **Duo cards** | Two side by side, `radius-lg`, `gradient-deep` and `gradient-vivid`, orb motif, a 32 dp circular badge (white 16%) with an icon top-left, label and amount in `on-deep`. |
-| **Bottom bar** | `surface`, `radius-xl` top corners, `elevation-float`; four tabs (Home, Salary, Reflection, More) around a 60 dp center action in `gradient-primary` with `glow-primary`, seated in a curved cradle. Active tab `violet-600`, inactive `ink-400`, always with labels. |
+| **Bottom bar** | `surface`, `radius-xl` top corners, `elevation-float`; four tabs (Home, Salary, Activity, More; the reflection is reached from Home and More from M2) around a 60 dp center action in `gradient-primary` with `glow-primary`, seated in a curved cradle. Active tab `violet-600`, inactive `ink-400`, always with labels. |
 | **Primary pill** | 52 dp high, `radius-full`, `gradient-primary`, white label, `glow-primary`. One per screen. On deep surfaces it inverts: white fill, `violet-800` label, no glow. |
 | **Secondary pill** | 52 dp, `violet-50` fill, `violet-700` label. Used for equal-weight decisions. |
 | **Text button** | `violet-700` label, no fill. |
