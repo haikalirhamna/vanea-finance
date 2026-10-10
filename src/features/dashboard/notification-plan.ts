@@ -2,13 +2,13 @@
  * The local reminders Vanea schedules (SYSTEM-OVERVIEW §9): what to say and when. Pure: lib/notifications.ts
  * hands the plan to the phone. Raise eligibility is never a notification.
  */
-import { DateString, addMonths, monthOf, nextPayday, paydayOf } from '@/domain/calendar';
+import { DateString, addMonths, dateInMonth, dayOfMonth, monthOf, nextPayday, paydayOf } from '@/domain/calendar';
 import { dueList } from '@/domain/debts';
 import { salaryFor } from '@/domain/salary-change';
 import { Snapshot } from '@/data/snapshot';
 import { formatMoney } from '@/lib/format';
 import { billReserveOf } from '@/domain/credit-lines';
-import { debtBookOf } from './dashboard-summary';
+import { buildDashboard, debtBookOf } from './dashboard-summary';
 
 export interface PlannedNotification {
   id: string;
@@ -59,7 +59,24 @@ function debtReminders(snapshot: Snapshot, today: DateString): PlannedNotificati
     });
 }
 
+const PRESSURE_DAY = 15;
+
+/**
+ * A serious salary-pressure level earns at most one notification a month (PRD SAL-8): on the 15th, which keeps the
+ * plan deterministic, so re-planning on every app open never sends it twice.
+ */
+function pressureReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  const { profile } = snapshot;
+  if (!profile?.notify.pressure || snapshot.salarySettings.length === 0) return [];
+  if (buildDashboard(snapshot, today).pressure.level !== 'SERIOUS') return [];
+  const month = dayOfMonth(today) <= PRESSURE_DAY ? monthOf(today) : addMonths(monthOf(today), 1);
+  return [{
+    id: `pressure:${month}`, at: atNine(dateInMonth(month, PRESSURE_DAY)), title: 'Your salary and your Pool',
+    body: 'Your Pool may run out sooner than you planned. Open Vanea to see a salary that would last.',
+  }];
+}
+
 /** Upcoming reminders, soonest first. Anything already in the past is left out. */
 export function planNotifications(snapshot: Snapshot, today: DateString): PlannedNotification[] {
-  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
+  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today), ...pressureReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
 }

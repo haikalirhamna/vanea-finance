@@ -5,6 +5,7 @@ import { SqlDriver } from '@/data/driver';
 import { Snapshot, loadSnapshot } from '@/data/snapshot';
 import { ActionContext, ActionResult } from '@/features/action-runtime';
 import { DashboardSummary, buildDashboard } from '@/features/dashboard/dashboard-summary';
+import { ensureMonthlyReview } from '@/features/salary/salary-review-actions';
 import { planNotifications } from '@/features/dashboard/notification-plan';
 import { newId, openAppDatabase } from '@/platform/database';
 import { scheduleReminders } from '@/platform/reminders';
@@ -63,6 +64,7 @@ export function AppProvider({ children, openDriver = openAppDatabase, loading = 
     openDriver()
       .then(async (driver) => {
         ctxRef.current = contextFor(driver);
+        await ensureMonthlyReview(ctxRef.current);
         setCtx(ctxRef.current);
         setSnapshot(await loadSnapshot(driver));
       })

@@ -161,6 +161,16 @@ describe('planNotifications', () => {
     expect([...plan].map((n) => n.at)).toEqual([...plan].map((n) => n.at).sort());
   });
 
+  it('sends at most one serious-pressure reminder a month, on the 15th', async () => {
+    const lean = Array.from({ length: 12 }, (_, i) => ({ month: `${i < 3 ? 2025 : 2026}-${String(((i + 9) % 12) + 1).padStart(2, '0')}`, amount: 3_000_000 }));
+    const app = await onboardedApp({ historical: lean, openingBalances: { pool: 5_000_000, personal: 0, savings: 0 } });
+    const snapshot = await app.snapshot();
+    const pressure = (today: string) => planNotifications(snapshot, today).filter((n) => n.id.startsWith('pressure'));
+    expect(pressure('2026-11-09').map((n) => n.at)).toEqual(['2026-11-15T09:00']);
+    expect(pressure('2026-11-09')).toEqual(pressure('2026-11-12'));
+    expect(pressure('2026-11-20').map((n) => n.at)).toEqual(['2026-12-15T09:00']);
+  });
+
   it('leaves out reminders that are switched off, and anything already past', async () => {
     const app = await onboardedApp({}, '2026-10-01');
     await addLoan(app.ctx, { ...KREDIVO, firstDueDate: '2026-10-05' });

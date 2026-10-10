@@ -9,6 +9,9 @@ import { KeyValue, Note, SectionHeader } from '@/components/Rows';
 import { ContentSheet, HeroCanvas, Screen } from '@/components/Surfaces';
 import { GUTTER, space } from '@/components/theme';
 import { formatDate, formatMoney, formatMonth, formatMonthsCount } from '@/lib/format';
+import { SalaryReviewSection } from './SalaryReviewSection';
+import { salaryHistory } from '@/features/salary/salary-review';
+import { SecondaryPill } from '@/components/Buttons';
 import { DashboardSummary } from '@/features/dashboard/dashboard-summary';
 import { useApp } from '@/state/AppState';
 
@@ -20,6 +23,7 @@ function Payment({ d, onPay }: { d: DashboardSummary; onPay: () => void }) {
 }
 
 function Pressure({ d }: { d: DashboardSummary }) {
+  const router = useRouter();
   const { pressure } = d;
   if (pressure.level === 'NONE' || pressure.level === 'THIN_BUFFER') return null;
   const advice = pressure.safeSalary
@@ -29,6 +33,8 @@ function Pressure({ d }: { d: DashboardSummary }) {
     <View style={styles.block}>
       <NoticeCard title="Your salary is above your typical income">
         <AppText variant="body" tone="secondary">{advice}</AppText>
+        {pressure.monthsToEmpty !== null ? <AppText variant="body" tone="secondary">{`If this continues, your Pool may run out in about ${formatMonthsCount(pressure.monthsToEmpty)}.`}</AppText> : null}
+        <SecondaryPill label="Review salary" onPress={() => router.push(pressure.safeSalary ? { pathname: '/change-salary', params: { amount: String(pressure.safeSalary) } } : '/change-salary')} />
       </NoticeCard>
     </View>
   );
@@ -44,6 +50,21 @@ function Figures({ d }: { d: DashboardSummary }) {
       {pool.runwayMonths !== null ? <KeyValue label="Covers" value={formatMonthsCount(pool.runwayMonths)} /> : null}
       {salary.withheld > 0 ? <KeyValue label="Withheld for your advance" value={formatMoney(salary.withheld)} /> : null}
     </View>
+  );
+}
+
+const CHANGE_WORDS = { initial: 'First salary', calibration: 'Adjusted', increase: 'Raise', decrease: 'Decrease', restore: 'Returned' } as const;
+
+function History() {
+  const { snapshot } = useApp();
+  const items = salaryHistory(snapshot);
+  return (
+    <>
+      <SectionHeader title="Salary history" />
+      <View style={styles.block}>
+        {items.map((item) => <KeyValue key={item.id} label={`${CHANGE_WORDS[item.type]} · from ${formatMonth(item.period)}`} value={formatMoney(item.amount)} />)}
+      </View>
+    </>
   );
 }
 
@@ -67,6 +88,11 @@ export function SalaryScreen() {
           <><SectionHeader title="Salary advance" /><Note>Part of each salary is withheld until the advance is repaid.</Note></>
         ) : null}
         <Pressure d={d} />
+        <SalaryReviewSection />
+        <View style={styles.block}>
+          <SecondaryPill label="Change salary" onPress={() => router.push('/change-salary')} disabled={salary.amount === null} />
+        </View>
+        <History />
       </ContentSheet>
     </Screen>
   );

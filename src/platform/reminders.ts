@@ -10,7 +10,7 @@ export async function scheduleReminders(plan: readonly PlannedNotification[]): P
   const permission = await Notifications.requestPermissionsAsync();
   if (!permission.granted) return;
   await Notifications.setNotificationChannelAsync(CHANNEL, { name: 'Reminders', importance: Notifications.AndroidImportance.DEFAULT });
-  for (const item of plan) {
+  for (const item of plan.filter((entry) => new Date(entry.at).getTime() > Date.now())) {
     await Notifications.scheduleNotificationAsync({
       identifier: item.id,
       content: { title: item.title, body: item.body },

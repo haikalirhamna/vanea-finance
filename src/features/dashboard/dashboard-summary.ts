@@ -97,7 +97,7 @@ function salarySummary(snapshot: Snapshot, today: DateString, pool: number): Sal
   };
 }
 
-function poolSummary(snapshot: Snapshot, today: DateString, salary: number | null, balance: number) {
+export function poolSummary(snapshot: Snapshot, today: DateString, salary: number | null, balance: number) {
   const own = ownPool(balance, businessPrincipalOwed(loansOf(snapshot.debts), snapshot.transactions));
   const costs = [
     ...monthlyEquivalents(snapshot.subscriptions, today),

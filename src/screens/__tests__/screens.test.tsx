@@ -1,5 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { AddBusinessCostScreen } from '../AddBusinessCostScreen';
+import { SalaryScreen } from '../SalaryScreen';
+import { ChangeSalaryScreen } from '../ChangeSalaryScreen';
+import { recordIncome } from '@/features/income/income-actions';
 import { AddCreditLineScreen } from '../AddCreditLineScreen';
 import { AddExpenseScreen } from '../AddExpenseScreen';
 import { ActivityScreen } from '../ActivityScreen';
@@ -94,5 +97,53 @@ describe('Credit lines', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     const debts = await driver.all<{ name: string; kind: string }>('SELECT name, kind FROM debts');
     expect(debts).toEqual([{ name: 'ShopeePayLater', kind: 'credit_line' }]);
+  });
+});
+
+const STEADY_3M = Array.from({ length: 12 }, (_, i) => ({
+  month: `${i < 3 ? 2025 : 2026}-${String(((i + 9) % 12) + 1).padStart(2, '0')}`, amount: 3_000_000,
+}));
+
+describe('Salary review', () => {
+  const raiseEligible = {
+    onboarding: { historical: STEADY_3M, salary: 2_500_000 },
+    today: '2027-05-10',
+    async prepare(ctx: Parameters<NonNullable<Parameters<typeof renderApp>[1]>['prepare'] & {}>[0], setToday: (d: string) => void) {
+      for (const month of ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04']) {
+        setToday(`${month}-20`);
+        await recordIncome(ctx, { amount: month < '2027-01' ? 3_000_000 : 4_500_000 });
+      }
+      setToday('2027-05-10');
+    },
+  };
+
+  it('offers keeping, a smaller raise and the maximum as equal choices, and applies the raise', async () => {
+    const { driver } = await renderApp(<SalaryScreen />, raiseEligible);
+    expect(await screen.findByText('Your income has moved up and held there.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Keep Rp 2.500.000' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Choose a smaller increase' })).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Increase to Rp 2.620.000' }));
+    await waitFor(async () => {
+      const rows = await driver.all<{ amount: number; change_type: string }>('SELECT amount, change_type FROM salary_settings ORDER BY rowid');
+      expect(rows.at(-1)).toEqual({ amount: 2_620_000, change_type: 'increase' });
+    });
+  });
+
+  it('explains without a button when no raise is possible', async () => {
+    await renderApp(<SalaryScreen />, { today: '2026-11-02' });
+    expect(await screen.findByText(/We need at least 6 months|Your salary changed recently/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Increase to/ })).toBeNull();
+  });
+});
+
+describe('Change salary', () => {
+  it('shows what a lower salary does to the Pool before confirming', async () => {
+    const { driver } = await renderApp(<ChangeSalaryScreen />, { today: '2026-11-02' });
+    fireEvent.changeText(await screen.findByLabelText('New salary'), '3500000');
+    expect(await screen.findByText('Pool would last')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Decrease salary' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    const rows = await driver.all<{ amount: number; change_type: string }>('SELECT amount, change_type FROM salary_settings ORDER BY rowid');
+    expect(rows.at(-1)).toEqual({ amount: 3_500_000, change_type: 'decrease' });
   });
 });

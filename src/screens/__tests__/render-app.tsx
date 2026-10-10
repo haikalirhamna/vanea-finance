@@ -7,7 +7,7 @@ import { prepareDatabase } from '@/data/database';
 import { loadSnapshot } from '@/data/snapshot';
 import { ActionContext } from '@/features/action-runtime';
 import { BASIC_ONBOARDING } from '@/features/__tests__/helpers';
-import { completeOnboarding } from '@/features/onboarding/onboarding-actions';
+import { OnboardingInput, completeOnboarding } from '@/features/onboarding/onboarding-actions';
 import { AppProvider } from '@/state/AppState';
 
 export const TODAY = '2026-10-09';
@@ -21,14 +21,26 @@ export interface Rendered {
   driver: SqlDriver;
 }
 
-export async function renderApp(ui: ReactElement, options: { onboarded?: boolean } = {}): Promise<Rendered> {
+interface Options {
+  onboarded?: boolean;
+  onboarding?: Partial<OnboardingInput>;
+  /** Runs after onboarding, on the seed clock (which it may move), before the screen opens. */
+  prepare?: (ctx: ActionContext, setToday: (date: string) => void) => Promise<void>;
+  /** The date the screen sees. */
+  today?: string;
+}
+
+export async function renderApp(ui: ReactElement, options: Options = {}): Promise<Rendered> {
   const driver = await prepareDatabase(await openMemoryDriver());
   if (options.onboarded !== false) {
     let counter = 0;
-    const ctx: ActionContext = { driver, today: () => TODAY, now: () => `${TODAY}T10:00:00.000Z`, newId: () => `seed-${++counter}` };
-    const seeded = await completeOnboarding(ctx, BASIC_ONBOARDING);
+    let seedToday: string = TODAY;
+    const ctx: ActionContext = { driver, today: () => seedToday, now: () => `${seedToday}T10:00:00.000Z`, newId: () => `seed-${++counter}` };
+    const seeded = await completeOnboarding(ctx, { ...BASIC_ONBOARDING, ...options.onboarding });
     if (!seeded.ok) throw new Error(seeded.error.title);
+    await options.prepare?.(ctx, (date) => { seedToday = date; });
   }
+  jest.setSystemTime(new Date(`${options.today ?? TODAY}T10:00:00`));
   render(<AppProvider openDriver={async () => driver}>{ui}</AppProvider>);
   await waitFor(() => expect(screen.toJSON()).not.toBeNull(), { timeout: 15_000 });
   return { driver };
