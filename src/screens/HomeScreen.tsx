@@ -9,6 +9,7 @@ import { ListRow, SectionHeader } from '@/components/Rows';
 import { ContentSheet, HeroCanvas, Screen } from '@/components/Surfaces';
 import { GUTTER, space } from '@/components/theme';
 import { formatDate, formatMoney, formatMonthsCount, formatPercent } from '@/lib/format';
+import { subscriptionList } from '@/features/subscriptions/subscription-summary';
 import { monthPrompts } from '@/features/reflection/reflection-summary';
 import { formatMonthName } from '@/lib/format';
 import { DashboardSummary } from '@/features/dashboard/dashboard-summary';
@@ -59,9 +60,11 @@ function MonthInvites() {
   const { snapshot, today } = useApp();
   const router = useRouter();
   const { reflectOn, needsIntention } = monthPrompts(snapshot, today);
-  if (!reflectOn && !needsIntention) return null;
+  const due = subscriptionList(snapshot, today).rows.filter((row) => row.dueToday);
+  if (!reflectOn && !needsIntention && due.length === 0) return null;
   return (
     <View style={styles.stack}>
+      {due.map((row) => <ListRow key={row.id} icon="repeat" title={`${row.name} renews`} subtitle="Confirm the billing when it is charged" trailing={formatMoney(row.price ?? 0)} onPress={() => router.push({ pathname: '/subscription/[id]', params: { id: row.id } })} />)}
       {reflectOn ? <ListRow icon="calendar" title={`Reflect on ${formatMonthName(reflectOn)}`} subtitle="Look back at the month" onPress={() => router.push({ pathname: '/reflection', params: { month: reflectOn } })} /> : null}
       {needsIntention ? <ListRow icon="edit" title={`Set your intention for ${formatMonthName(today.slice(0, 7))}`} subtitle="What do you want to set aside?" onPress={() => router.push('/intention')} divider={false} /> : null}
     </View>

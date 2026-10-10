@@ -7,6 +7,7 @@ import { dueList } from '@/domain/debts';
 import { salaryFor } from '@/domain/salary-change';
 import { Snapshot } from '@/data/snapshot';
 import { formatMoney } from '@/lib/format';
+import { priceAt } from '@/domain/subscriptions';
 import { billReserveOf } from '@/domain/credit-lines';
 import { buildDashboard, debtBookOf } from './dashboard-summary';
 
@@ -59,6 +60,17 @@ function debtReminders(snapshot: Snapshot, today: DateString): PlannedNotificati
     });
 }
 
+function subscriptionReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  if (!snapshot.profile?.notify.subscriptions) return [];
+  return snapshot.subscriptions
+    .filter((s) => s.nextBillingDate >= today)
+    .flatMap((s) => {
+      const price = priceAt(s.prices, s.nextBillingDate);
+      if (price === null) return [];
+      return [{ id: `subscription:${s.id}:${s.nextBillingDate}`, at: atNine(s.nextBillingDate), title: 'Subscription renews', body: `${s.name} renews today: ${formatMoney(price)}.` }];
+    });
+}
+
 const PRESSURE_DAY = 15;
 
 /**
@@ -78,5 +90,5 @@ function pressureReminders(snapshot: Snapshot, today: DateString): PlannedNotifi
 
 /** Upcoming reminders, soonest first. Anything already in the past is left out. */
 export function planNotifications(snapshot: Snapshot, today: DateString): PlannedNotification[] {
-  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today), ...pressureReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
+  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today), ...pressureReminders(snapshot, today), ...subscriptionReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
 }

@@ -7,6 +7,9 @@ import { IntentionScreen } from '../IntentionScreen';
 import { ReflectionScreen } from '../ReflectionScreen';
 import { paySalary } from '@/features/salary/salary-actions';
 import { recordExpense } from '@/features/spending/spending-actions';
+import { AddSubscriptionScreen } from '../AddSubscriptionScreen';
+import { SubscriptionDetailScreen } from '../SubscriptionDetailScreen';
+import { addSubscription } from '@/features/subscriptions/subscription-actions';
 import { AddCreditLineScreen } from '../AddCreditLineScreen';
 import { AddExpenseScreen } from '../AddExpenseScreen';
 import { ActivityScreen } from '../ActivityScreen';
@@ -181,5 +184,37 @@ describe('Intention and reflection', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Save reflection' }));
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(await driver.all('SELECT month, improve_note FROM reflections')).toEqual([{ month: '2026-10', improve_note: 'Cook more' }]);
+  });
+});
+
+describe('Subscriptions', () => {
+  it('asks how it is billed, with no default, and saves', async () => {
+    const { driver } = await renderApp(<AddSubscriptionScreen />);
+    fireEvent.changeText(await screen.findByLabelText('Name'), 'Figma');
+    fireEvent.changeText(screen.getByLabelText('Price'), '225000');
+    expect(screen.getByRole('button', { name: 'Save subscription' }).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByRole('radio', { name: 'Monthly' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Save subscription' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(await driver.all('SELECT name, billing_cycle FROM subscriptions')).toEqual([{ name: 'Figma', billing_cycle: 'monthly' }]);
+  });
+
+  it('asks "Did the price change?" when a different amount is charged', async () => {
+    let id = '';
+    const { driver } = await renderApp(<SubscriptionDetailScreen />, {
+      async prepare(ctx) {
+        const added = await addSubscription(ctx, { name: 'Figma', cycle: 'monthly', price: 225_000, nextBillingDate: '2026-10-09' });
+        id = added.ok ? added.value.id : '';
+        mockParams = { id };
+      },
+    });
+    fireEvent.press(await screen.findByRole('button', { name: 'Record billing' }));
+    fireEvent.changeText(await screen.findByLabelText('Amount charged'), '250000');
+    expect(await screen.findByText('Did the price change?')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Record billing' }).at(-1)!.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByRole('radio', { name: 'From now on' }));
+    fireEvent.press(screen.getAllByRole('button', { name: 'Record billing' }).at(-1)!);
+    // The billing date is the day the price was saved, so the new price replaces it.
+    await waitFor(async () => expect(await driver.all('SELECT price FROM subscription_prices')).toEqual([{ price: 250_000 }]));
   });
 });

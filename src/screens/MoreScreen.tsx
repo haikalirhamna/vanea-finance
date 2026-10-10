@@ -16,6 +16,7 @@ export function MoreScreen() {
     <Screen bottomInset={BOTTOM_BAR_SPACE}>
       <HeroCanvas><AppText variant="title" tone="onDeep" accessibilityRole="header">More</AppText></HeroCanvas>
       <ContentSheet style={{ paddingTop: space.lg }}>
+        <ListRow icon="repeat" title="Subscriptions" subtitle="What you pay each month or year" onPress={() => router.push('/subscriptions')} />
         <ListRow icon="card" title="Debts" subtitle="Credit lines, PayLater and loans" onPress={() => router.push('/debts')} />
         <ListRow icon="calendar" title="Reflections" subtitle="Look back on a month" onPress={() => router.push('/reflections')} />
         <ListRow icon="download" title="Backup and restore" subtitle={backupNote} onPress={() => router.push('/backup')} />
