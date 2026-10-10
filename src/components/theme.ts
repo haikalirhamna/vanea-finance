@@ -29,7 +29,7 @@ export interface Colors {
 
 const light: Colors = {
   canvas: '#F6F5FA', surface: '#FFFFFF', field: '#EFEDF5', line: '#E9E7F0',
-  ink900: '#15121F', ink600: '#5F5A70', ink400: '#9A96A8',
+  ink900: '#15121F', ink600: '#5F5A70', ink400: '#6B677D',
   tile: violet[50], tileIcon: violet[700], accent: violet[600], accentSoft: violet[100],
   caution600: '#9A5B13', caution100: '#FDF1DE', caution300: '#F4C27A',
   onDeep: '#FFFFFF', onDeepMuted: 'rgba(255,255,255,0.72)', onDeepFaint: 'rgba(255,255,255,0.16)',
@@ -38,7 +38,7 @@ const light: Colors = {
 const dark: Colors = {
   ...light,
   canvas: '#0F0B1A', surface: '#18132A', field: '#221B38', line: 'rgba(255,255,255,0.08)',
-  ink900: '#F3F1F8', ink600: '#ADA8BD', ink400: '#7C768F',
+  ink900: '#F3F1F8', ink600: '#ADA8BD', ink400: '#9A94AE',
   tile: 'rgba(124,82,240,0.16)', tileIcon: violet[300], accent: violet[500], accentSoft: 'rgba(124,82,240,0.22)',
   caution600: '#F4C27A', caution100: 'rgba(244,194,122,0.14)',
 };

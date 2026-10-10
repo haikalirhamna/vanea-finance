@@ -110,11 +110,19 @@ src/
     <feature>/<feature>-actions.ts   One file per feature: onboarding, income, spending, business, salary, debts, corrections, settings, backup
     dashboard/                dashboard-summary.ts (everything Home shows), notification-plan.ts (what to remind, when)
     activity/                 activity-list.ts (the Activity list)
+    salary/                   + salary-review.ts / salary-review-actions.ts (monthly review, raises, decrease, restore), advance-actions.ts, review-copy.ts
+    reflection/               reflection-summary.ts (figures, prompts), reflection-actions.ts (intention, reflection)
+    subscriptions/            subscription-actions.ts (billing, price changes), subscription-summary.ts
+    savings/                  savings-actions.ts (savings, Pool surplus)
+    investments/              investment-actions.ts, investment-summary.ts (view, net position), investment-words.ts
+    debts/                    + conversion-actions.ts (purchase → installments)
   state/AppState.tsx          AppProvider: opens the database, keeps the snapshot, `act()` runs an action and refreshes
+  state/LockGate.tsx          App lock screen; locks again after 60 s in the background
   platform/                   Everything that touches the phone; each file has a `.web.ts` twin for the preview
     database.ts               Key in the Android Keystore (expo-secure-store), opens the encrypted database
     backup-files.ts           Write to cache + share sheet; document picker
     reminders.ts              Replace all scheduled local notifications with the plan
+    lock.ts                   Biometric / screen-lock prompt (expo-local-authentication)
   screens/                    One component per screen; `app/` files only re-export them
   components/                 Shared UI components (theme tokens, text, buttons, cards, rows, fields, sheets, bottom bar)
   lib/

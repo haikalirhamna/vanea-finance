@@ -91,9 +91,9 @@ export function AppTabBar({ state, navigation }: TabBarProps) {
   const render = (item: (typeof tabs)[number]) => <Tab key={item.route.key} route={item.route} focused={item.focused} onPress={() => press(item.route, item.focused)} />;
   return (
     <View style={[styles.bar, shadows.float, { backgroundColor: colors.surface, paddingBottom: insets.bottom, height: BAR_HEIGHT + insets.bottom }]}>
-      {tabs.slice(0, 2).map(render)}
+      <View accessibilityRole="tablist" style={styles.tabGroup}>{tabs.slice(0, 2).map(render)}</View>
       <CenterAction onPress={() => router.push('/add-expense')} onLongPress={() => setMenuOpen(true)} />
-      {tabs.slice(2).map(render)}
+      <View accessibilityRole="tablist" style={styles.tabGroup}>{tabs.slice(2).map(render)}</View>
       <AddMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
     </View>
   );
@@ -101,6 +101,7 @@ export function AppTabBar({ state, navigation }: TabBarProps) {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: space.sm },
+  tabGroup: { flex: 1, flexDirection: 'row' },
   tab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 2 },
   centerSlot: { width: CENTER_SIZE + 24, alignItems: 'center', justifyContent: 'flex-start', height: BAR_HEIGHT },
   cradle: { position: 'absolute', top: -34, width: CENTER_SIZE + 16, height: CENTER_SIZE + 16, borderRadius: (CENTER_SIZE + 16) / 2 },

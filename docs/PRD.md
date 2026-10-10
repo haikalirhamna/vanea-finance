@@ -1,6 +1,6 @@
 # Vanea — Product Requirements Document
 
-**Version:** 2.8
+**Version:** 2.9
 **Status:** Draft for review
 **Owner:** @haikalirhamna
 **Last updated:** 2026-10-09
@@ -508,7 +508,7 @@ There is no analytics in the app, by design. Phase 1 metrics come from the owner
 | **M2 — Salary decisions** ✅ | Salary review, decrease/restore, calibration, pressure warnings, end-of-month reflection. → **Start daily personal use.** | 1 |
 | **M3 — Completeness** ✅ | Subscriptions (add, edit, delete, price changes) and reminders, salary advance, debts (credit lines, installment loans), savings, investments by asset class, surplus, intention, highlights, pace, notifications, app lock. | 1 |
 | **Validation** | 3 months of real use. Re-run the simulation with real monthly totals; tune constants in `config.ts` if needed. | 1 |
-| **M4 — Public readiness** | Copy polish, accessibility pass, privacy policy, Play listing, Data safety form, production build without INTERNET permission. | 2 |
+| **M4 — Public readiness** (in progress: assets, privacy policy, listing draft, release config and web accessibility audit done; device verification, screenshots and Play submission remain) | Copy polish, accessibility pass, privacy policy, Play listing, Data safety form, production build without INTERNET permission. | 2 |
 | **M5 — Closed test** | ≥ 12 testers for 14 consecutive days; fix findings. | 2 |
 | **M6 — Launch** | Production release on Google Play. | 2 |
 

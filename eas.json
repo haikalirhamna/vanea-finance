@@ -1,0 +1,9 @@
+{
+  "cli": { "version": ">= 12.0.0", "appVersionSource": "local" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal", "android": { "buildType": "apk" } },
+    "preview": { "distribution": "internal", "android": { "buildType": "apk" }, "env": { "VANEA_RELEASE": "1" } },
+    "production": { "android": { "buildType": "app-bundle" }, "env": { "VANEA_RELEASE": "1" } }
+  },
+  "submit": { "production": { "android": { "track": "internal" } } }
+}

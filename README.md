@@ -2,7 +2,7 @@
 
 A local-first Android app for people with variable income. Income goes into a **Pool**; you pay yourself a steady **salary** from it; Vanea shows what you can spend each day, warns calmly when your salary outpaces your income, and guides a monthly Kakeibo reflection.
 
-**Status:** M0, M0.1, M1, M2 and M3 done. The financial engine (`src/domain`) and the core loop are implemented: onboarding, income, business costs, expenses, salary payment, PayLater/credit lines/loans, corrections, encrypted export/import, local reminders. Not yet verified on a real Android device (see below). M2 added the monthly salary review, raise decisions, decrease and restore, pressure card, intention and Kakeibo reflection. M3 added subscriptions with price changes, salary advance, savings, Pool surplus, investments by holding, net position, purchase-to-installment conversion, app lock and the full reminder set. Next: M4 (release readiness).
+**Status:** M0, M0.1, M1, M2 and M3 done. The financial engine (`src/domain`) and the core loop are implemented: onboarding, income, business costs, expenses, salary payment, PayLater/credit lines/loans, corrections, encrypted export/import, local reminders. Not yet verified on a real Android device (see below). M2 added the monthly salary review, raise decisions, decrease and restore, pressure card, intention and Kakeibo reflection. M3 added subscriptions with price changes, salary advance, savings, Pool surplus, investments by holding, net position, purchase-to-installment conversion, app lock and the full reminder set. M4 (release readiness) is in progress: icons, privacy policy, listing draft and release config are done; what remains needs a real device and a Play Console account.
 
 ## Documents
 
@@ -13,6 +13,9 @@ A local-first Android app for people with variable income. Income goes into a **
 | [Schema](docs/SCHEMA.md) | SQLite tables, derived values, integrity rules |
 | [Design](docs/DESIGN.md) | UX direction, copy, screens, states |
 | [User Flows](docs/USER-FLOWS.md) | Step-by-step flows and edge cases |
+| [Privacy](docs/PRIVACY.md) | Privacy policy draft |
+| [Play listing](docs/PLAY-LISTING.md) | Store listing and Data safety draft |
+| [Release](docs/RELEASE.md) | Build commands and the on-device checklist |
 
 ## Salary engine simulation
 
