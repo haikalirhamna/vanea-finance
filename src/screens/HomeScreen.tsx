@@ -101,7 +101,7 @@ export function HomeScreen() {
       <ContentSheet style={styles.sheet}>
         <DuoRow>
           <DuoCard variant="deep" icon="wallet" label="Salary" amount={d.salary.amount ?? 0} caption={salaryCaption} onPress={() => router.push('/salary')} />
-          <DuoCard variant="vivid" icon="shield" label="Pool" amount={d.pool.balance} {...(poolCaption ? { caption: poolCaption } : {})} />
+          <DuoCard variant="vivid" icon="shield" label="Pool" amount={d.pool.balance} onPress={() => router.push('/pool')} {...(poolCaption ? { caption: poolCaption } : {})} />
         </DuoRow>
         <View style={styles.stack}><DebtNotice d={d} onPress={() => router.push('/debts')} /></View>
         <MonthInvites />

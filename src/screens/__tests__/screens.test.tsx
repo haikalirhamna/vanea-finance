@@ -10,6 +10,8 @@ import { recordExpense } from '@/features/spending/spending-actions';
 import { AddSubscriptionScreen } from '../AddSubscriptionScreen';
 import { SubscriptionDetailScreen } from '../SubscriptionDetailScreen';
 import { addSubscription } from '@/features/subscriptions/subscription-actions';
+import { AdvanceScreen } from '../AdvanceScreen';
+import { SavingsScreen } from '../SavingsScreen';
 import { AddCreditLineScreen } from '../AddCreditLineScreen';
 import { AddExpenseScreen } from '../AddExpenseScreen';
 import { ActivityScreen } from '../ActivityScreen';
@@ -216,5 +218,24 @@ describe('Subscriptions', () => {
     fireEvent.press(screen.getAllByRole('button', { name: 'Record billing' }).at(-1)!);
     // The billing date is the day the price was saved, so the new price replaces it.
     await waitFor(async () => expect(await driver.all('SELECT price FROM subscription_prices')).toEqual([{ price: 250_000 }]));
+  });
+});
+
+describe('Advance and savings', () => {
+  it('shows what an advance does to the next salaries before taking it', async () => {
+    const { driver } = await renderApp(<AdvanceScreen />, { today: '2026-10-25' });
+    fireEvent.changeText(await screen.findByLabelText('Amount'), '3000000');
+    expect(screen.getByText('Rp 3.000.000 now. Your next 3 salaries will be Rp 1.000.000 lower.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Take advance' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(await driver.all('SELECT amount, installment_amount FROM salary_advances')).toEqual([{ amount: 3_000_000, installment_amount: 1_000_000 }]);
+  });
+
+  it('sets money aside from Available Spending', async () => {
+    const { driver } = await renderApp(<SavingsScreen />);
+    fireEvent.press(await screen.findByRole('button', { name: 'Set aside' }));
+    fireEvent.changeText(await screen.findByLabelText('Amount'), '500000');
+    fireEvent.press(screen.getAllByRole('button', { name: 'Set aside' }).at(-1)!);
+    await waitFor(async () => expect(await driver.all("SELECT amount FROM transactions WHERE kind = 'savings_deposit'")).toEqual([{ amount: 500_000 }]));
   });
 });

@@ -15,6 +15,7 @@ import { DailyAllowance, Pace, availableSpending, dailyAllowance, paceStatus } f
 import { monthlyEquivalents } from '@/domain/subscriptions';
 import { creditLinesOf, loansOf } from '@/data/debts';
 import { Snapshot } from '@/data/snapshot';
+import { periodsRemaining } from '@/domain/salary-advance';
 import { maxPaymentNow } from '@/domain/salary-payment';
 import { salaryIsDue, salaryState } from '../salary/salary-state';
 
@@ -41,6 +42,8 @@ export interface SalarySummary {
   payableNow: number;
   /** Withheld from this period's salary to repay a salary advance. */
   withheld: number;
+  /** The active salary advance, if any. */
+  advance: { outstanding: number; installment: number; periodsLeft: number } | null;
 }
 
 export interface DebtSummary {
@@ -94,6 +97,9 @@ function salarySummary(snapshot: Snapshot, today: DateString, pool: number): Sal
     remaining: payment?.remaining ?? 0,
     payableNow: payment ? maxPaymentNow(payment, pool) : 0,
     withheld: payment?.installmentWithheld ?? 0,
+    advance: state.advance
+      ? { outstanding: state.advance.outstanding, installment: state.advance.record.installmentAmount, periodsLeft: periodsRemaining(state.advance.record, state.advance.outstanding) }
+      : null,
   };
 }
 

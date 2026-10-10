@@ -69,7 +69,7 @@ function History() {
 }
 
 export function SalaryScreen() {
-  const { dashboard: d, snapshot } = useApp();
+  const { dashboard: d } = useApp();
   const router = useRouter();
   if (!d) return null;
   const { salary } = d;
@@ -84,9 +84,17 @@ export function SalaryScreen() {
       <ContentSheet style={styles.sheet}>
         <Figures d={d} />
         <Payment d={d} onPay={() => router.push('/pay-salary')} />
-        {snapshot.advances.some((a) => a.status === 'active') ? (
-          <><SectionHeader title="Salary advance" /><Note>Part of each salary is withheld until the advance is repaid.</Note></>
-        ) : null}
+        <SectionHeader title="Salary advance" />
+        <View style={styles.block}>
+          {salary.advance ? (
+            <>
+              <KeyValue label="You still owe" value={formatMoney(salary.advance.outstanding)} strong />
+              <KeyValue label="Withheld from each salary" value={formatMoney(salary.advance.installment)} />
+              <KeyValue label="Salaries left" value={String(salary.advance.periodsLeft)} />
+            </>
+          ) : <Note>Take some of your Pool now and repay it from your next salaries.</Note>}
+          <SecondaryPill label={salary.advance ? 'Repay early' : 'Take an advance'} onPress={() => router.push('/advance')} disabled={salary.amount === null} />
+        </View>
         <Pressure d={d} />
         <SalaryReviewSection />
         <View style={styles.block}>
