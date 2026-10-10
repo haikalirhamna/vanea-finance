@@ -6,12 +6,26 @@ import { poolSummary } from '../dashboard/dashboard-summary';
 import { balanceOf } from '@/domain/ledger';
 import { allMovements } from '@/domain/ledger-movements';
 import { runwayMonths, safeSurplus } from '@/domain/pool';
+import { availableSpending } from '@/domain/spending';
+import { loadSnapshot } from '@/data/snapshot';
+import { formatMoney } from '@/lib/format';
 import { salaryState } from '../salary/salary-state';
 import { DateString } from '@/domain/calendar';
 import { Snapshot } from '@/data/snapshot';
 
+/** Moving money out of Available Spending needs it to be there: only spending itself may go below zero. */
+export async function shortOfSpending(ctx: ActionContext, amount: number): Promise<ActionResult | null> {
+  const available = availableSpending((await loadSnapshot(ctx.driver)).transactions);
+  if (amount <= available) return null;
+  return failure(problem(
+    "That's more than you have to spend", `Available Spending is ${formatMoney(Math.max(0, available))}.`, 'Enter a smaller amount, or move it from the Pool.',
+  ));
+}
+
 /** Available Spending → Savings. */
-export function depositSavings(ctx: ActionContext, input: { amount: number }): Promise<ActionResult> {
+export async function depositSavings(ctx: ActionContext, input: { amount: number }): Promise<ActionResult> {
+  const short = await shortOfSpending(ctx, input.amount);
+  if (short) return short;
   return commitBatch(ctx, [{ id: ctx.newId(), kind: 'savings_deposit', date: ctx.today(), amount: input.amount }]);
 }
 

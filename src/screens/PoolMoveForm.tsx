@@ -11,8 +11,8 @@ import { SurplusTarget, allocateSurplus, runwayAfterMove, surplusView } from '@/
 import { formatMoney, formatMonthsCount } from '@/lib/format';
 import { useApp } from '@/state/AppState';
 
-function destinationsOf(): { value: string; label: string }[] {
-  return [{ value: 'savings', label: 'Savings' }];
+function destinationsOf(holdings: readonly { id: string; name: string; status: string }[]): { value: string; label: string }[] {
+  return [{ value: 'savings', label: 'Savings' }, ...holdings.filter((h) => h.status === 'open').map((h) => ({ value: h.id, label: h.name }))];
 }
 
 function targetOf(choice: string): SurplusTarget {
@@ -35,7 +35,7 @@ export function PoolMoveForm() {
   return (
     <View style={styles.form}>
       <AmountField label="Move out of the Pool" value={amount} onChange={setAmount} />
-      <Segmented label="To" options={destinationsOf()} value={choice} onChange={setChoice} />
+      <Segmented label="To" options={destinationsOf(snapshot.holdings)} value={choice} onChange={setChoice} />
       {above && after !== null ? <Note tone="caution">{`That is more than your safe surplus. Your Pool would then cover ${formatMonthsCount(after)}.`}</Note> : null}
       {error ? <ErrorNotice error={error} /> : null}
       {done ? <Note>{done}</Note> : null}

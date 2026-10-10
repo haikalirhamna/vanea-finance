@@ -16,10 +16,12 @@ export function MoreScreen() {
     <Screen bottomInset={BOTTOM_BAR_SPACE}>
       <HeroCanvas><AppText variant="title" tone="onDeep" accessibilityRole="header">More</AppText></HeroCanvas>
       <ContentSheet style={{ paddingTop: space.lg }}>
+        <ListRow icon="trend" title="Investments" subtitle="Holdings, kept apart from your money" onPress={() => router.push('/investments')} />
         <ListRow icon="shield" title="Savings" subtitle="Set aside money" onPress={() => router.push('/savings')} />
         <ListRow icon="repeat" title="Subscriptions" subtitle="What you pay each month or year" onPress={() => router.push('/subscriptions')} />
         <ListRow icon="card" title="Debts" subtitle="Credit lines, PayLater and loans" onPress={() => router.push('/debts')} />
         <ListRow icon="calendar" title="Reflections" subtitle="Look back on a month" onPress={() => router.push('/reflections')} />
+        <ListRow icon="info" title="Net position" subtitle="Money, investments and debts" onPress={() => router.push('/net-position')} />
         <ListRow icon="download" title="Backup and restore" subtitle={backupNote} onPress={() => router.push('/backup')} />
         <ListRow icon="sliders" title="Settings" subtitle="Payday, reminders" onPress={() => router.push('/settings')} divider={false} />
         <Note>Your data lives only on this phone.</Note>

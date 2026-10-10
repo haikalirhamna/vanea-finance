@@ -12,6 +12,9 @@ import { SubscriptionDetailScreen } from '../SubscriptionDetailScreen';
 import { addSubscription } from '@/features/subscriptions/subscription-actions';
 import { AdvanceScreen } from '../AdvanceScreen';
 import { SavingsScreen } from '../SavingsScreen';
+import { AddHoldingScreen } from '../AddHoldingScreen';
+import { HoldingDetailScreen } from '../HoldingDetailScreen';
+import { addHolding, recordExistingPutIn } from '@/features/investments/investment-actions';
 import { AddCreditLineScreen } from '../AddCreditLineScreen';
 import { AddExpenseScreen } from '../AddExpenseScreen';
 import { ActivityScreen } from '../ActivityScreen';
@@ -237,5 +240,34 @@ describe('Advance and savings', () => {
     fireEvent.changeText(await screen.findByLabelText('Amount'), '500000');
     fireEvent.press(screen.getAllByRole('button', { name: 'Set aside' }).at(-1)!);
     await waitFor(async () => expect(await driver.all("SELECT amount FROM transactions WHERE kind = 'savings_deposit'")).toEqual([{ amount: 500_000 }]));
+  });
+});
+
+describe('Investments', () => {
+  it('saves a holding with its general risk label shown', async () => {
+    const { driver } = await renderApp(<AddHoldingScreen />);
+    fireEvent.changeText(await screen.findByLabelText('Name'), 'Bitcoin');
+    fireEvent.press(screen.getByRole('radio', { name: 'Crypto & digital assets' }));
+    expect(screen.getByText(/Very high risk in general/)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Save holding' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(await driver.all('SELECT name, asset_class FROM holdings')).toEqual([{ name: 'Bitcoin', asset_class: 'crypto_digital' }]);
+  });
+
+  it('records an estimate without touching any money', async () => {
+    const { driver } = await renderApp(<HoldingDetailScreen />, {
+      async prepare(ctx) {
+        const added = await addHolding(ctx, { name: 'BBCA', assetClass: 'stock' });
+        const id = added.ok ? added.value.id : '';
+        await recordExistingPutIn(ctx, { holdingId: id, amount: 4_000_000 });
+        mockParams = { id };
+      },
+    });
+    const before = await driver.all('SELECT COUNT(*) AS n FROM transactions');
+    fireEvent.press(await screen.findByRole('button', { name: 'Update value' }));
+    fireEvent.changeText(await screen.findByLabelText('Current value'), '4600000');
+    fireEvent.press(screen.getAllByRole('button', { name: 'Update value' }).at(-1)!);
+    await waitFor(async () => expect(await driver.all('SELECT value FROM holding_valuations')).toEqual([{ value: 4_600_000 }]));
+    expect(await driver.all('SELECT COUNT(*) AS n FROM transactions')).toEqual(before);
   });
 });

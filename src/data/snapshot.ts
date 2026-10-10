@@ -5,6 +5,7 @@ import { DebtRecord, loadDebts } from './debts';
 import { SqlDriver } from './driver';
 import { loadHistoricalMonths } from './planning';
 import { Profile, getProfile } from './profile';
+import { HoldingRecord, loadHoldings } from './investments';
 import { IntentionRecord, ReflectionRecord, loadIntentions, loadReflections } from './reflections';
 import { EvaluationRecord, loadEvaluations } from './salary-evaluations';
 import { AdvanceRecord, SalarySettingRecord, loadAdvances, loadSalarySettings } from './salary';
@@ -22,6 +23,7 @@ export interface Snapshot {
   advances: AdvanceRecord[];
   subscriptions: SubscriptionRecord[];
   debts: DebtRecord[];
+  holdings: HoldingRecord[];
 }
 
 export async function loadSnapshot(driver: SqlDriver): Promise<Snapshot> {
@@ -36,5 +38,6 @@ export async function loadSnapshot(driver: SqlDriver): Promise<Snapshot> {
     advances: await loadAdvances(driver),
     subscriptions: await loadSubscriptions(driver),
     debts: await loadDebts(driver),
+    holdings: await loadHoldings(driver),
   };
 }

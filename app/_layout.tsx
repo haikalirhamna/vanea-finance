@@ -27,6 +27,7 @@ function Gate() {
       <Stack.Screen name="change-salary" options={FORM} />
       <Stack.Screen name="intention" options={FORM} />
       <Stack.Screen name="advance" options={FORM} />
+      <Stack.Screen name="add-holding" options={FORM} />
       <Stack.Screen name="add-subscription" options={FORM} />
       <Stack.Screen name="reflection" options={FORM} />
     </Stack>
