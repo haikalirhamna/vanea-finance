@@ -2,7 +2,7 @@
 
 A local-first Android app for people with variable income. Income goes into a **Pool**; you pay yourself a steady **salary** from it; Vanea shows what you can spend each day, warns calmly when your salary outpaces your income, and guides a monthly Kakeibo reflection.
 
-**Status:** M0, M0.1 and M1 done. The financial engine (`src/domain`) and the core loop are implemented: onboarding, income, business costs, expenses, salary payment, PayLater/credit lines/loans, corrections, encrypted export/import, local reminders. Not yet verified on a real Android device (see below). Next: M2 (salary decisions).
+**Status:** M0, M0.1, M1 and M2 done. The financial engine (`src/domain`) and the core loop are implemented: onboarding, income, business costs, expenses, salary payment, PayLater/credit lines/loans, corrections, encrypted export/import, local reminders. Not yet verified on a real Android device (see below). M2 added the monthly salary review, raise decisions, decrease and restore, pressure card, intention and Kakeibo reflection. Next: M3 (completeness).
 
 ## Documents
 
@@ -28,7 +28,7 @@ Results are summarized in [System Overview §5.8](docs/SYSTEM-OVERVIEW.md#58-sim
 
 ```sh
 npm install
-npm test               # 533 tests: domain, data (real SQLite), features, screens
+npm test               # 564 tests: domain, data (real SQLite), features, screens
 npm run test:coverage  # coverage for src/domain
 npm run typecheck
 npm run lint           # also enforces: src/domain imports nothing outside src/domain

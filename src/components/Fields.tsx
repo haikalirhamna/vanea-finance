@@ -1,5 +1,5 @@
 /** Input fields: amount with live thousands separators, text, a choice with no default, and a date. */
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 import { DateString, addMonths, dateInMonth, monthOf } from '@/domain/calendar';
 import { WEEKDAYS, monthGrid } from '@/lib/calendar-grid';
@@ -29,21 +29,35 @@ interface AmountProps {
   autoFocus?: boolean;
 }
 
+/** Focus after the screen has finished sliding in: focusing mid-transition scrolls the page sideways on the web. */
+const FOCUS_DELAY_MS = 450;
+
+function useDelayedFocus(enabled: boolean | undefined) {
+  const input = useRef<TextInput>(null);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const timer = setTimeout(() => input.current?.focus(), FOCUS_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [enabled]);
+  return input;
+}
+
 export function AmountField({ label, value, onChange, hint, large, autoFocus }: AmountProps) {
   const { colors } = useTheme();
+  const input = useDelayedFocus(autoFocus);
   const text = value === null ? '' : formatMoneyInput(String(value));
   return (
     <Labeled label={label} hint={hint}>
       <View style={[styles.input, { backgroundColor: colors.field }, large ? styles.inputLarge : null]}>
         <AppText variant={large ? 'amountLarge' : 'bodyStrong'} tone="faint">Rp</AppText>
         <TextInput
+          ref={input}
           accessibilityLabel={label}
           value={text}
           onChangeText={(next) => onChange(parseMoneyInput(next))}
           keyboardType="number-pad"
           placeholder="0"
           placeholderTextColor={colors.ink400}
-          autoFocus={autoFocus}
           selectionColor={colors.accent}
           style={[styles.textInput, tabular, { color: colors.ink900, fontFamily: fonts.semibold, fontSize: large ? 32 : 18 }]}
         />
@@ -210,7 +224,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 52, borderRadius: radius.sm, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   inputLarge: { minHeight: 68 },
   multiline: { minHeight: 88, alignItems: 'flex-start', paddingTop: space.md },
-  textInput: { flex: 1, paddingVertical: space.sm, minHeight: 48 },
+  textInput: { flex: 1, minWidth: 0, outlineWidth: 0, paddingVertical: space.sm, minHeight: 48 },
   segmented: { flexDirection: 'row', borderWidth: 1, borderRadius: radius.full, padding: 3, gap: 3 },
   segment: { flex: 1, minHeight: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xs },
   dateText: { flex: 1 },

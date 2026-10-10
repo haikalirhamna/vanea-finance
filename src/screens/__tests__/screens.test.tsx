@@ -3,6 +3,10 @@ import { AddBusinessCostScreen } from '../AddBusinessCostScreen';
 import { SalaryScreen } from '../SalaryScreen';
 import { ChangeSalaryScreen } from '../ChangeSalaryScreen';
 import { recordIncome } from '@/features/income/income-actions';
+import { IntentionScreen } from '../IntentionScreen';
+import { ReflectionScreen } from '../ReflectionScreen';
+import { paySalary } from '@/features/salary/salary-actions';
+import { recordExpense } from '@/features/spending/spending-actions';
 import { AddCreditLineScreen } from '../AddCreditLineScreen';
 import { AddExpenseScreen } from '../AddExpenseScreen';
 import { ActivityScreen } from '../ActivityScreen';
@@ -11,15 +15,16 @@ import { OnboardingScreen } from '../OnboardingScreen';
 import { freezeToday, renderApp, transactionsOf } from './render-app';
 
 const mockBack = jest.fn();
+let mockParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.setTimeout(30_000);
 beforeAll(freezeToday);
 afterAll(() => jest.useRealTimers());
-beforeEach(() => mockBack.mockClear());
+beforeEach(() => { mockBack.mockClear(); mockParams = {}; });
 
 describe('Home', () => {
   it('shows what can be spent today', async () => {
@@ -145,5 +150,36 @@ describe('Change salary', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     const rows = await driver.all<{ amount: number; change_type: string }>('SELECT amount, change_type FROM salary_settings ORDER BY rowid');
     expect(rows.at(-1)).toEqual({ amount: 3_500_000, change_type: 'decrease' });
+  });
+});
+
+describe('Intention and reflection', () => {
+  it('saves this month\'s intention, allowing 0', async () => {
+    const { driver } = await renderApp(<IntentionScreen />);
+    expect(screen.getByRole('button', { name: 'Save intention' }).props.accessibilityState.disabled).toBe(true);
+    fireEvent.changeText(await screen.findByLabelText('Set aside'), '0');
+    fireEvent.press(screen.getByRole('button', { name: 'Save intention' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(await driver.all('SELECT month, set_aside_amount FROM monthly_intentions')).toEqual([{ month: '2026-10', set_aside_amount: 0 }]);
+  });
+
+  it('shows last month\'s numbers, saves notes, and then reads back as history', async () => {
+    mockParams = { month: '2026-10' };
+    const { driver } = await renderApp(<ReflectionScreen />, {
+      today: '2026-11-03',
+      async prepare(ctx, setToday) {
+        setToday('2026-10-26');
+        await paySalary(ctx, { amount: 4_700_000 });
+        setToday('2026-10-28');
+        await recordExpense(ctx, { amount: 300_000, category: 'needs', date: '2026-10-27' });
+        setToday('2026-11-03');
+      },
+    });
+    expect(await screen.findByText('October reflection')).toBeTruthy();
+    expect(screen.getByLabelText('Needs, Rp 300.000')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('How can I improve?'), 'Cook more');
+    fireEvent.press(screen.getByRole('button', { name: 'Save reflection' }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(await driver.all('SELECT month, improve_note FROM reflections')).toEqual([{ month: '2026-10', improve_note: 'Cook more' }]);
   });
 });

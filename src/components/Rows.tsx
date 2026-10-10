@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, createContext, useContext } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { IconName } from './Icon';
@@ -49,9 +49,13 @@ export function SectionHeader({ title, action }: { title: string; action?: React
   );
 }
 
+/** Inside a form the body already has the gutter, so notes must not add their own. */
+export const FlushContext = createContext(false);
+
 /** Quiet explanatory text under a figure. */
 export function Note({ children, tone = 'secondary' }: { children: ReactNode; tone?: 'secondary' | 'caution' }) {
-  return <AppText variant="caption" tone={tone === 'caution' ? 'caution' : 'secondary'} style={styles.note}>{children}</AppText>;
+  const flush = useContext(FlushContext);
+  return <AppText variant="caption" tone={tone === 'caution' ? 'caution' : 'secondary'} style={flush ? styles.noteFlush : styles.note}>{children}</AppText>;
 }
 
 /** A label with its value on one line: used for plain figures in previews. */
@@ -70,6 +74,7 @@ const styles = StyleSheet.create({
   trailing: { textAlign: 'right', maxWidth: '45%' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: GUTTER, marginTop: space.xxl, marginBottom: space.xs },
   note: { paddingHorizontal: GUTTER, marginTop: space.sm },
+  noteFlush: { marginTop: space.xs },
   keyValue: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: space.md, paddingVertical: space.xs },
   keyLabel: { flexShrink: 1 },
   keyValueText: { textAlign: 'right', flexShrink: 0 },

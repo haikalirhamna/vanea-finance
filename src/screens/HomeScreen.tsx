@@ -9,6 +9,8 @@ import { ListRow, SectionHeader } from '@/components/Rows';
 import { ContentSheet, HeroCanvas, Screen } from '@/components/Surfaces';
 import { GUTTER, space } from '@/components/theme';
 import { formatDate, formatMoney, formatMonthsCount, formatPercent } from '@/lib/format';
+import { monthPrompts } from '@/features/reflection/reflection-summary';
+import { formatMonthName } from '@/lib/format';
 import { DashboardSummary } from '@/features/dashboard/dashboard-summary';
 import { useApp } from '@/state/AppState';
 
@@ -52,6 +54,20 @@ function Hero({ d, onPaySalary }: { d: DashboardSummary; onPaySalary: () => void
   );
 }
 
+/** Quiet invitations, never badges: reflect on last month, set this month's intention. */
+function MonthInvites() {
+  const { snapshot, today } = useApp();
+  const router = useRouter();
+  const { reflectOn, needsIntention } = monthPrompts(snapshot, today);
+  if (!reflectOn && !needsIntention) return null;
+  return (
+    <View style={styles.stack}>
+      {reflectOn ? <ListRow icon="calendar" title={`Reflect on ${formatMonthName(reflectOn)}`} subtitle="Look back at the month" onPress={() => router.push({ pathname: '/reflection', params: { month: reflectOn } })} /> : null}
+      {needsIntention ? <ListRow icon="edit" title={`Set your intention for ${formatMonthName(today.slice(0, 7))}`} subtitle="What do you want to set aside?" onPress={() => router.push('/intention')} divider={false} /> : null}
+    </View>
+  );
+}
+
 function DebtNotice({ d, onPress }: { d: DashboardSummary; onPress: () => void }) {
   if (d.debts.dueBeforePayday <= 0) return null;
   return (
@@ -85,6 +101,7 @@ export function HomeScreen() {
           <DuoCard variant="vivid" icon="shield" label="Pool" amount={d.pool.balance} {...(poolCaption ? { caption: poolCaption } : {})} />
         </DuoRow>
         <View style={styles.stack}><DebtNotice d={d} onPress={() => router.push('/debts')} /></View>
+        <MonthInvites />
         <SectionHeader title="Recent spending" />
         {d.recentSpending.length === 0 ? <AppText variant="body" tone="secondary" style={styles.empty}>Nothing yet. Tap + to add your first expense.</AppText> : null}
         {d.recentSpending.map((item, index) => (

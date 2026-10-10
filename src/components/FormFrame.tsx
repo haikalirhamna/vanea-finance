@@ -7,6 +7,7 @@ import { ExplainedError } from '@/features/errors';
 import { AppText } from './AppText';
 import { IconButton, PrimaryPill } from './Buttons';
 import { ErrorNotice } from './ErrorNotice';
+import { FlushContext } from './Rows';
 import { ContentSheet, HeroCanvas } from './Surfaces';
 import { GUTTER, space, useTheme } from './theme';
 
@@ -58,7 +59,7 @@ export function FormFrame({ title, subtitle, children, submitLabel, onSubmit, on
       </HeroCanvas>
       <ContentSheet style={styles.sheet}>
         <View style={styles.body}>
-          {children}
+          <FlushContext.Provider value>{children}</FlushContext.Provider>
           {error ? <ErrorNotice error={error} /> : null}
           <PrimaryPill label={submitLabel} onPress={submit} busy={busy} disabled={disabled} />
         </View>

@@ -25,6 +25,8 @@ function Gate() {
       <Stack.Screen name="add-credit-line" options={FORM} />
       <Stack.Screen name="add-loan" options={FORM} />
       <Stack.Screen name="change-salary" options={FORM} />
+      <Stack.Screen name="intention" options={FORM} />
+      <Stack.Screen name="reflection" options={FORM} />
     </Stack>
   );
 }
