@@ -1,6 +1,6 @@
 import { getProfile } from '@/data/profile';
 import { onboardedApp } from '../../__tests__/helpers';
-import { changePayday, setBufferMonths, setNotifications } from '../settings-actions';
+import { changePayday, setAppLock, setBufferMonths, setNotifications } from '../settings-actions';
 
 describe('settings', () => {
   it('changes the payday within 1 to 28', async () => {
@@ -23,5 +23,16 @@ describe('settings', () => {
     expect((await getProfile(app.driver))!.bufferMonths).toBe(6);
     expect((await setBufferMonths(app.ctx, 25)).ok).toBe(false);
     expect((await setBufferMonths(app.ctx, -1)).ok).toBe(false);
+  });
+});
+
+describe('setAppLock', () => {
+  it('turns the lock off and on', async () => {
+    const app = await onboardedApp();
+    expect((await app.snapshot()).profile!.appLockEnabled).toBe(true);
+    await setAppLock(app.ctx, false);
+    expect((await app.snapshot()).profile!.appLockEnabled).toBe(false);
+    await setAppLock(app.ctx, true);
+    expect((await app.snapshot()).profile!.appLockEnabled).toBe(true);
   });
 });

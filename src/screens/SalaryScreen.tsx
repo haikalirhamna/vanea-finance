@@ -1,5 +1,6 @@
 /** The Salary tab in M1: this period's salary and payment. Review, decrease and the pressure card arrive in M2. */
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { BOTTOM_BAR_SPACE } from '@/components/BottomBar';
@@ -22,10 +23,17 @@ function Payment({ d, onPay }: { d: DashboardSummary; onPay: () => void }) {
   return <Note>{salary.remaining <= 0 ? 'This period is paid.' : 'Salary can be paid on payday.'}</Note>;
 }
 
+/** "Not now" collapses the card for the rest of this session; it returns the next time Vanea is opened. */
+const dismissedMonths = new Set<string>();
+
 function Pressure({ d }: { d: DashboardSummary }) {
   const router = useRouter();
+  const { today } = useApp();
+  const month = today.slice(0, 7);
+  const [dismissed, setDismissed] = useState(dismissedMonths.has(month));
   const { pressure } = d;
   if (pressure.level === 'NONE' || pressure.level === 'THIN_BUFFER') return null;
+  if (dismissed) return <Note>Your salary is above your typical income. Review it any time with Change salary.</Note>;
   const advice = pressure.safeSalary
     ? `A salary of ${formatMoney(pressure.safeSalary)} would be easier for your Pool to keep up with.`
     : 'Your Pool is covering the difference for now.';
@@ -34,6 +42,7 @@ function Pressure({ d }: { d: DashboardSummary }) {
       <NoticeCard title="Your salary is above your typical income">
         <AppText variant="body" tone="secondary">{advice}</AppText>
         {pressure.monthsToEmpty !== null ? <AppText variant="body" tone="secondary">{`If this continues, your Pool may run out in about ${formatMonthsCount(pressure.monthsToEmpty)}.`}</AppText> : null}
+        <SecondaryPill label="Not now" onPress={() => { dismissedMonths.add(month); setDismissed(true); }} />
         <SecondaryPill label="Review salary" onPress={() => router.push(pressure.safeSalary ? { pathname: '/change-salary', params: { amount: String(pressure.safeSalary) } } : '/change-salary')} />
       </NoticeCard>
     </View>

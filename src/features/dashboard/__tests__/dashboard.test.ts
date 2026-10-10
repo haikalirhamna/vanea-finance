@@ -171,13 +171,23 @@ describe('planNotifications', () => {
     expect(pressure('2026-11-20').map((n) => n.at)).toEqual(['2026-12-15T09:00']);
   });
 
+  it('reminds on the first of next month to reflect, and about a stale backup once a month', async () => {
+    const app = await onboardedApp();
+    const plan = planNotifications(await app.snapshot(), '2026-10-09');
+    expect(plan.find((n) => n.id === 'month:2026-11')).toMatchObject({ at: '2026-11-01T09:00', title: 'A new month' });
+    expect(plan.find((n) => n.id.startsWith('backup'))).toMatchObject({ id: 'backup:2026-11', at: '2026-11-05T09:00' });
+    const backedUp = { ...(await app.snapshot()) };
+    backedUp.profile = { ...backedUp.profile!, lastExportAt: '2026-10-01T08:00:00.000Z' };
+    expect(planNotifications(backedUp, '2026-10-09').some((n) => n.id.startsWith('backup'))).toBe(false);
+  });
+
   it('leaves out reminders that are switched off, and anything already past', async () => {
     const app = await onboardedApp({}, '2026-10-01');
     await addLoan(app.ctx, { ...KREDIVO, firstDueDate: '2026-10-05' });
     app.setToday('2026-10-09');
     const snapshot = await app.snapshot();
     expect(planNotifications(snapshot, '2026-10-09').some((n) => n.at.startsWith('2026-10-05'))).toBe(false);
-    const off = { ...snapshot, profile: { ...snapshot.profile!, notify: { ...snapshot.profile!.notify, payday: false, debts: false } } };
+    const off = { ...snapshot, profile: { ...snapshot.profile!, notify: { payday: false, subscriptions: false, debts: false, month: false, pressure: false, backup: false } } };
     expect(planNotifications(off, '2026-10-09')).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import { loadSnapshot } from '@/data/snapshot';
 import { formatMoney } from '@/lib/format';
 import { ActionContext, ActionResult, failure, runAtomic, success, writeBatch } from '../action-runtime';
 import { problem } from '../errors';
+import { debtOpening } from '../onboarding/onboarding-actions';
 import { LoanTerms, previewLoan } from './loan-preview';
 
 export interface CreditLineInput {
@@ -17,6 +18,10 @@ export interface CreditLineInput {
   dueDay: number;
   creditLimit?: number;
   note?: string;
+  /** What is owed on it today, if anything. */
+  existingBalance?: number;
+  /** Take that balance out of Available Spending now (the default), or treat it as older debt. */
+  setAside?: boolean;
 }
 
 export interface LoanInput extends Omit<LoanTerms, 'startDate'> {
@@ -48,7 +53,10 @@ export async function addCreditLine(ctx: ActionContext, input: CreditLineInput):
       statementDay: input.statementDay, dueDay: input.dueDay, ...(input.creditLimit ? { creditLimit: input.creditLimit } : {}),
       ...(input.note ? { note: input.note } : {}), origin: 'manual', status: 'open',
     }, ctx.now());
-    return success({ id });
+    const opening = debtOpening(ctx, { id } as DebtRecord, input.existingBalance ?? 0, input.setAside ?? true);
+    if (opening.length === 0) return success({ id });
+    const written = await writeBatch(ctx, opening);
+    return written.ok ? success({ id }) : written;
   });
 }
 

@@ -2,11 +2,11 @@
  * The local reminders Vanea schedules (SYSTEM-OVERVIEW §9): what to say and when. Pure: lib/notifications.ts
  * hands the plan to the phone. Raise eligibility is never a notification.
  */
-import { DateString, addMonths, dateInMonth, dayOfMonth, monthOf, nextPayday, paydayOf } from '@/domain/calendar';
+import { DateString, addMonths, daysBetween, dateInMonth, dayOfMonth, monthOf, nextPayday, paydayOf } from '@/domain/calendar';
 import { dueList } from '@/domain/debts';
 import { salaryFor } from '@/domain/salary-change';
 import { Snapshot } from '@/data/snapshot';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatMonthName } from '@/lib/format';
 import { priceAt } from '@/domain/subscriptions';
 import { billReserveOf } from '@/domain/credit-lines';
 import { buildDashboard, debtBookOf } from './dashboard-summary';
@@ -71,6 +71,32 @@ function subscriptionReminders(snapshot: Snapshot, today: DateString): PlannedNo
     });
 }
 
+/** The first of next month: a prompt to reflect and set an intention (PRD NOT-4). Never a badge or a score. */
+function monthReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  if (!snapshot.profile?.notify.month) return [];
+  const next = addMonths(monthOf(today), 1);
+  return [{
+    id: `month:${next}`, at: atNine(dateInMonth(next, 1)), title: 'A new month',
+    body: `Look back on ${formatMonthName(monthOf(today))} and say what you want to set aside this month.`,
+  }];
+}
+
+const BACKUP_STALE_DAYS = 30;
+const BACKUP_DAY = 5;
+
+/** A gentle backup reminder, once a month, only when the last backup is old or missing. */
+function backupReminders(snapshot: Snapshot, today: DateString): PlannedNotification[] {
+  const { profile } = snapshot;
+  if (!profile?.notify.backup) return [];
+  const days = profile.lastExportAt ? daysBetween(profile.lastExportAt.slice(0, 10), today) : null;
+  if (days !== null && days <= BACKUP_STALE_DAYS) return [];
+  const month = dayOfMonth(today) <= BACKUP_DAY ? monthOf(today) : addMonths(monthOf(today), 1);
+  return [{
+    id: `backup:${month}`, at: atNine(dateInMonth(month, BACKUP_DAY)), title: 'Back up your data',
+    body: 'Your data lives only on this phone. Make an encrypted backup so you never lose it.',
+  }];
+}
+
 const PRESSURE_DAY = 15;
 
 /**
@@ -90,5 +116,5 @@ function pressureReminders(snapshot: Snapshot, today: DateString): PlannedNotifi
 
 /** Upcoming reminders, soonest first. Anything already in the past is left out. */
 export function planNotifications(snapshot: Snapshot, today: DateString): PlannedNotification[] {
-  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today), ...pressureReminders(snapshot, today), ...subscriptionReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
+  return [...paydayReminders(snapshot, today), ...debtReminders(snapshot, today), ...pressureReminders(snapshot, today), ...subscriptionReminders(snapshot, today), ...monthReminders(snapshot, today), ...backupReminders(snapshot, today)].sort((a, b) => (a.at < b.at ? -1 : 1));
 }

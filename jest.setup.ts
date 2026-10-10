@@ -18,3 +18,5 @@ jest.mock('@/platform/database', () => {
     openAppDatabase: jest.fn(),
   };
 });
+
+jest.mock('@/platform/lock', () => ({ authenticate: jest.fn(async () => true), lockAvailable: jest.fn(async () => true) }));

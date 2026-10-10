@@ -34,3 +34,12 @@ export async function setBufferMonths(ctx: ActionContext, months: number): Promi
     return success(undefined);
   });
 }
+
+/** Turns the app lock on or off. The screen asks the phone to authenticate before turning it off. */
+export async function setAppLock(ctx: ActionContext, enabled: boolean): Promise<ActionResult> {
+  return runAtomic(ctx, async () => {
+    const profile = await requireProfile(ctx.driver);
+    await updateProfile(ctx.driver, profile.id, { appLockEnabled: enabled }, ctx.now());
+    return success(undefined);
+  });
+}

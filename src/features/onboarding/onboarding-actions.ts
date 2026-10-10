@@ -91,7 +91,8 @@ function loanRecord(ctx: ActionContext, debt: OnboardingLoan): DebtRecord {
   };
 }
 
-function debtOpening(ctx: ActionContext, record: DebtRecord, amount: number, setAside: boolean): Transaction[] {
+/** What was already owed when Vanea started: the debt, and optionally the bill reserve set aside for it. */
+export function debtOpening(ctx: ActionContext, record: DebtRecord, amount: number, setAside: boolean): Transaction[] {
   if (amount <= 0) return [];
   const base = { date: ctx.today(), debtId: record.id };
   const owed: Transaction = { id: ctx.newId(), kind: 'opening_balance', amount, account: 'debt', ...base };

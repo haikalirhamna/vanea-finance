@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { BottomSheet } from '@/components/BottomSheet';
 import { IconButton, PrimaryPill, SecondaryPill } from '@/components/Buttons';
+import { ConvertPurchaseSheet } from './ConvertPurchaseSheet';
 import { AmountField, Segmented } from '@/components/Fields';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { KeyValue, Note } from '@/components/Rows';
@@ -85,7 +86,7 @@ interface Targets {
   owed: number;
 }
 
-function Actions({ t, onMode, onClose }: { t: Targets; onMode: (mode: Mode) => void; onClose: () => void }) {
+function Actions({ t, onMode, onClose, onConvert }: { t: Targets; onMode: (mode: Mode) => void; onClose: () => void; onConvert: () => void }) {
   const { line, loan, owed, debt } = t;
   if (debt.status === 'closed') return <Note>This debt is closed.</Note>;
   return (
@@ -93,6 +94,7 @@ function Actions({ t, onMode, onClose }: { t: Targets; onMode: (mode: Mode) => v
       {line ? <PrimaryPill label="Pay bill" onPress={() => onMode('bill')} disabled={owed <= 0} /> : null}
       {loan ? <PrimaryPill label="Pay installment" onPress={() => onMode('installment')} disabled={owed <= 0} /> : null}
       {loan ? <SecondaryPill label="Pay off early" onPress={() => onMode('payoff')} disabled={owed <= 0} /> : null}
+      {line ? <SecondaryPill label="Convert a purchase to installments" onPress={onConvert} /> : null}
       <SecondaryPill label="Add interest or fee" onPress={() => onMode('cost')} />
       {line ? <SecondaryPill label="Close this line" onPress={onClose} disabled={owed > 0} /> : null}
     </>
@@ -112,6 +114,7 @@ export function DebtDetailScreen() {
   const { snapshot, act, today } = useApp();
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
+  const [converting, setConverting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<ExplainedError | null>(null);
   const t = targetsOf(snapshot, id!);
@@ -136,10 +139,11 @@ export function DebtDetailScreen() {
         <View style={styles.block}>
           {t.line ? <LineFacts line={t.line} /> : null}
           {message ? <Note>{message}</Note> : null}
-          <Actions t={t} onMode={setMode} onClose={close} />
+          <Actions t={t} onMode={setMode} onClose={close} onConvert={() => setConverting(true)} />
           {error ? <ErrorNotice error={error} /> : null}
         </View>
       </ContentSheet>
+      <ConvertPurchaseSheet debtId={id!} visible={converting} onClose={() => setConverting(false)} />
       <BottomSheet visible={mode !== null} onClose={() => setMode(null)} title={mode ? TITLES[mode] : undefined}>
         {mode ? <ActionForm key={mode} mode={mode} debtId={id!} suggested={suggestion(mode, t.owed, billDue)}
           onDone={(text) => { setMessage(text ?? null); setMode(null); }} /> : null}

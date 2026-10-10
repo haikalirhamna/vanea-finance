@@ -10,7 +10,8 @@ import { ContentSheet, HeroCanvas, Screen } from '@/components/Surfaces';
 import { GUTTER, space, useTheme } from '@/components/theme';
 import { NotificationSettings } from '@/data/profile';
 import { ExplainedError } from '@/features/errors';
-import { changePayday, setNotifications } from '@/features/settings/settings-actions';
+import { authenticate } from '@/platform/lock';
+import { changePayday, setAppLock, setNotifications } from '@/features/settings/settings-actions';
 import { useApp } from '@/state/AppState';
 
 const REMINDERS: { key: keyof NotificationSettings; label: string }[] = [
@@ -58,6 +59,14 @@ export function SettingsScreen() {
         </View>
       </HeroCanvas>
       <ContentSheet style={styles.sheet}>
+        <SectionHeader title="Privacy" />
+        <View style={styles.block}>
+          <ReminderRow label="Lock the app" value={snapshot.profile!.appLockEnabled} onChange={async (next) => {
+            if (!next && !(await authenticate('Turn off the app lock'))) return;
+            await act((ctx) => setAppLock(ctx, next));
+          }} />
+          <Note>Uses your phone's fingerprint, face or screen lock. It only guards the screen: your data is encrypted either way.</Note>
+        </View>
         <SectionHeader title="Payday" />
         <PaydaySection />
         <SectionHeader title="Reminders" />

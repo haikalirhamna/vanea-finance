@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '@/state/AppState';
+import { LockGate } from '@/state/LockGate';
 
 const FORM = { presentation: 'modal', animation: 'slide_from_bottom' } as const;
 
@@ -41,7 +42,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <AppProvider>
-        <Gate />
+        <LockGate>
+          <Gate />
+        </LockGate>
       </AppProvider>
     </SafeAreaProvider>
   );
